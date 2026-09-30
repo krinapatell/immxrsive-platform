@@ -1,31 +1,27 @@
 ﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Student } from '@/types';
 import StudentCard from '@/components/StudentCard';
+import StudentCardSkeleton from '@/components/StudentCardSkeleton';
 
 export default function DirectoryPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [availabilityFilter, setAvailabilityFilter] = useState('');
 
   useEffect(() => {
     async function fetchStudents() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('profile_status', 'published');
+      const { data, error } = await supabase.from('students').select('*');
 
       if (error) {
         console.error('Error fetching students:', error);
       } else if (data) {
         setStudents(data as Student[]);
-        setFilteredStudents(data as Student[]);
       }
       setLoading(false);
     }
@@ -33,97 +29,75 @@ export default function DirectoryPage() {
     fetchStudents();
   }, []);
 
-  useEffect(() => {
-    let result = students;
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
+      student.name.toLowerCase().includes(search.toLowerCase()) ||
+      student.program.toLowerCase().includes(search.toLowerCase()) ||
+      student.skills.some((skill) => skill.toLowerCase().includes(search.toLowerCase()));
 
-    if (search.trim() !== '') {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.headline.toLowerCase().includes(q) ||
-          s.program.toLowerCase().includes(q) ||
-          (s.skills && s.skills.some((skill) => skill.toLowerCase().includes(q)))
-      );
-    }
+    const matchesStatus = statusFilter ? student.status === statusFilter : true;
+    const matchesAvailability = availabilityFilter
+      ? student.availability.includes(availabilityFilter)
+      : true;
 
-    if (statusFilter !== 'all') {
-      result = result.filter((s) => s.status === statusFilter);
-    }
-
-    if (availabilityFilter !== 'all') {
-      result = result.filter(
-        (s) => s.availability && s.availability.includes(availabilityFilter)
-      );
-    }
-
-    setFilteredStudents(result);
-  }, [search, statusFilter, availabilityFilter, students]);
+    return matchesSearch && matchesStatus && matchesAvailability;
+  });
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8 text-center sm:text-left">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
           ImmXrsive Talent Directory
         </h1>
-        <p className="mt-2 text-lg text-gray-600">
+        <p className="text-gray-600 mt-2">
           Discover skilled students and alumni across tech, design, and immersive media.
         </p>
       </div>
 
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="w-full md:w-1/2">
-          <input
-            type="text"
-            placeholder="Search by name, skill, program..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-          />
-        </div>
+      {/* Controls */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <input
+          type="text"
+          placeholder="Search by name, skill, program..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
 
-        <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full md:w-auto">
+        <div className="flex gap-4 w-full md:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">All Statuses</option>
-            <option value="current">Current Students</option>
+            <option value="">All Statuses</option>
+            <option value="current">Current Student</option>
             <option value="alumni">Alumni</option>
           </select>
 
           <select
             value={availabilityFilter}
             onChange={(e) => setAvailabilityFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">All Availability</option>
-            <option value="Co-op">Co-op</option>
-            <option value="Full-time">Full-time</option>
-            <option value="Contract">Contract</option>
-            <option value="Internship">Internship</option>
+            <option value="">All Availability</option>
+            <option value="internship">Internship</option>
+            <option value="full-time">Full-time</option>
+            <option value="contract">Contract</option>
           </select>
         </div>
       </div>
 
+      {/* Grid Display */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-base">Loading directory talent...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <StudentCardSkeleton key={i} />
+          ))}
         </div>
       ) : filteredStudents.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-          <p className="text-gray-600 text-base font-medium">No candidates match your current filters.</p>
-          <button
-            onClick={() => {
-              setSearch('');
-              setStatusFilter('all');
-              setAvailabilityFilter('all');
-            }}
-            className="mt-3 text-sm text-indigo-600 hover:text-indigo-800 underline font-medium"
-          >
-            Clear all filters
-          </button>
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <p className="text-gray-500 text-lg">No profile matches found.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
