@@ -1,0 +1,14 @@
+﻿{
+  "version": "R1-submission",
+  "routes": {
+    "directory": "/",
+    "studentProfile": "/students/:id",
+    "projectDetail": "/projects/:id"
+  },
+  "queryParams": {
+    "search": "search",
+    "skills": "skills",
+    "availability": "availability",
+    "status": "status"
+  }
+}
