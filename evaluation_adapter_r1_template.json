@@ -1,0 +1,26 @@
+﻿{
+  "release": "R1",
+  "project_name": "ImmXrsive Talent & Industry Platform",
+  "deployment_url": "https://immxrsive-platform.vercel.app",
+  "routes": {
+    "student_page_route": "/students/{id}",
+    "project_page_route": "/projects/{id}"
+  },
+  "endpoints": {
+    "directory_endpoint": "https://<YOUR-SUPABASE-PROJECT-REF>.supabase.co/rest/v1/students?select=*",
+    "student_detail_endpoint": "https://<YOUR-SUPABASE-PROJECT-REF>.supabase.co/rest/v1/students?id=eq.{id}&select=*",
+    "project_detail_endpoint": "https://<YOUR-SUPABASE-PROJECT-REF>.supabase.co/rest/v1/projects?contains_student_ids={id}&select=*"
+  },
+  "query_parameters": {
+    "text_search_param": "search",
+    "skill_param": "skill",
+    "availability_param": "availability",
+    "status_param": "status"
+  },
+  "data_mappings": {
+    "directory_results_path": "",
+    "id_field": "id",
+    "skills_field": "skills",
+    "contributors_field": "student_ids"
+  }
+}
