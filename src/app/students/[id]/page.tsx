@@ -11,21 +11,19 @@ export default function StudentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [student, setStudent] = useState<Student | null>(null);
+  const [student, setStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStudent() {
       setLoading(true);
 
-      // 1. Fetch all student records to safely find a match across any column format
       const { data, error } = await supabase.from('students').select('*');
 
       if (error || !data) {
         console.error('Error fetching student:', error);
         setStudent(null);
       } else {
-        // 2. Match by id, student_id, or slug (case-insensitive)
         const targetId = String(id).toLowerCase();
         const foundStudent = data.find((s: any) => {
           const sId = String(s.id || '').toLowerCase();
@@ -37,7 +35,6 @@ export default function StudentDetailPage({
         if (!foundStudent) {
           setStudent(null);
         } else {
-          // 3. R1.20 Privacy Check: Hide explicitly unpublished or draft profiles
           const isUnpublished =
             foundStudent.published === false ||
             foundStudent.is_published === false ||
@@ -46,7 +43,7 @@ export default function StudentDetailPage({
           if (isUnpublished) {
             setStudent(null);
           } else {
-            setStudent(foundStudent as Student);
+            setStudent(foundStudent);
           }
         }
       }
@@ -85,6 +82,10 @@ export default function StudentDetailPage({
     );
   }
 
+  // Safely grab bio summary from any matching DB field
+  const bioSummary =
+    student.bio || student.headline || student.about || student.summary;
+
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <Link
@@ -97,11 +98,16 @@ export default function StudentDetailPage({
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
         <h1 className="text-3xl font-extrabold text-gray-900">{student.name}</h1>
         <p className="text-indigo-600 font-medium mt-1">{student.program}</p>
-        <p className="text-gray-600 mt-4">{student.bio}</p>
+
+        {bioSummary && (
+          <p className="text-gray-600 mt-4 text-base leading-relaxed">
+            {bioSummary}
+          </p>
+        )}
 
         {student.skills && student.skills.length > 0 && (
           <div className="mt-6 flex flex-wrap gap-2">
-            {student.skills.map((skill, idx) => (
+            {student.skills.map((skill: string, idx: number) => (
               <span
                 key={idx}
                 className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold"
