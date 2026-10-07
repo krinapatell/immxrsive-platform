@@ -90,14 +90,25 @@ function DirectoryContent() {
     fetchStudents();
   }, []);
 
+  // R1.06 Fix: Multi-term search with AND semantics for skills & text
   const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      search === '' ||
-      student.name.toLowerCase().includes(search.toLowerCase()) ||
-      student.program.toLowerCase().includes(search.toLowerCase()) ||
-      student.skills.some((skill) =>
-        skill.toLowerCase().includes(search.toLowerCase())
-      );
+    let matchesSearch = true;
+
+    if (search.trim()) {
+      // Split search input into distinct terms (e.g., "Unity C#" -> ["unity", "c#"])
+      const terms = search.trim().toLowerCase().split(/\s+/);
+
+      // Every term MUST match at least one attribute (name, program, or skill)
+      matchesSearch = terms.every((term) => {
+        const matchesName = student.name.toLowerCase().includes(term);
+        const matchesProgram = student.program.toLowerCase().includes(term);
+        const matchesSkill = student.skills.some((skill) =>
+          skill.toLowerCase().includes(term)
+        );
+
+        return matchesName || matchesProgram || matchesSkill;
+      });
+    }
 
     const matchesStatus = statusFilter ? student.status === statusFilter : true;
     const matchesAvailability = availabilityFilter
@@ -122,7 +133,7 @@ function DirectoryContent() {
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
         <input
           type="text"
-          placeholder="Search by name, skill, program..."
+          placeholder="Search by name, skills (e.g. Unity C#), program..."
           aria-label="Search candidates by name, skill, or program"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
