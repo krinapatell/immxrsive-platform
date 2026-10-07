@@ -18,26 +18,36 @@ export default function StudentDetailPage({
     async function fetchStudent() {
       setLoading(true);
 
-      // Fetch student record by ID or slug
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .or(`id.eq.${id},slug.eq.${id}`)
-        .single();
+      // 1. Fetch all student records to safely find a match across any column format
+      const { data, error } = await supabase.from('students').select('*');
 
       if (error || !data) {
+        console.error('Error fetching student:', error);
         setStudent(null);
       } else {
-        // R1.20 Check: Hide profile if explicitly marked unpublished or draft
-        const isUnpublished =
-          data.published === false ||
-          data.is_published === false ||
-          data.status === 'unpublished';
+        // 2. Match by id, student_id, or slug (case-insensitive)
+        const targetId = String(id).toLowerCase();
+        const foundStudent = data.find((s: any) => {
+          const sId = String(s.id || '').toLowerCase();
+          const sStudentId = String(s.student_id || '').toLowerCase();
+          const sSlug = String(s.slug || '').toLowerCase();
+          return sId === targetId || sStudentId === targetId || sSlug === targetId;
+        });
 
-        if (isUnpublished) {
+        if (!foundStudent) {
           setStudent(null);
         } else {
-          setStudent(data as Student);
+          // 3. R1.20 Privacy Check: Hide explicitly unpublished or draft profiles
+          const isUnpublished =
+            foundStudent.published === false ||
+            foundStudent.is_published === false ||
+            foundStudent.status === 'unpublished';
+
+          if (isUnpublished) {
+            setStudent(null);
+          } else {
+            setStudent(foundStudent as Student);
+          }
         }
       }
       setLoading(false);
