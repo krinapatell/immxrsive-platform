@@ -73,7 +73,11 @@ function DirectoryContent() {
   useEffect(() => {
     async function fetchStudents() {
       setLoading(true);
-      const { data, error } = await supabase.from('students').select('*');
+      // R1.20 Fix: Exclude unpublished profiles from public directory reads
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('published', true);
 
       if (error) {
         console.error('Error fetching students:', error);
