@@ -73,16 +73,19 @@ function DirectoryContent() {
   useEffect(() => {
     async function fetchStudents() {
       setLoading(true);
-      // R1.20 Fix: Exclude unpublished profiles from public directory reads
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('published', true);
+      const { data, error } = await supabase.from('students').select('*');
 
       if (error) {
         console.error('Error fetching students:', error);
       } else if (data) {
-        setStudents(data as Student[]);
+        // Exclude unpublished profiles while safely handling boolean/missing/null schema properties
+        const publishedData = data.filter(
+          (student) =>
+            student.published !== false &&
+            student.is_published !== false &&
+            student.status !== 'unpublished'
+        );
+        setStudents(publishedData as Student[]);
       }
       setLoading(false);
     }
@@ -90,29 +93,36 @@ function DirectoryContent() {
     fetchStudents();
   }, []);
 
-  // R1.06 Fix: Multi-term search with AND semantics for skills & text
+  // Multi-term search (AND semantics) + Flexible matching for status & availability options
   const filteredStudents = students.filter((student) => {
     let matchesSearch = true;
 
     if (search.trim()) {
-      // Split search input into distinct terms (e.g., "Unity C#" -> ["unity", "c#"])
       const terms = search.trim().toLowerCase().split(/\s+/);
-
-      // Every term MUST match at least one attribute (name, program, or skill)
       matchesSearch = terms.every((term) => {
-        const matchesName = student.name.toLowerCase().includes(term);
-        const matchesProgram = student.program.toLowerCase().includes(term);
-        const matchesSkill = student.skills.some((skill) =>
+        const matchesName = student.name?.toLowerCase().includes(term);
+        const matchesProgram = student.program?.toLowerCase().includes(term);
+        const matchesSkill = student.skills?.some((skill) =>
           skill.toLowerCase().includes(term)
         );
-
         return matchesName || matchesProgram || matchesSkill;
       });
     }
 
-    const matchesStatus = statusFilter ? student.status === statusFilter : true;
+    const matchesStatus = statusFilter
+      ? student.status?.toLowerCase().includes(statusFilter.toLowerCase()) ||
+        (statusFilter === 'current' &&
+          student.status?.toLowerCase().includes('student'))
+      : true;
+
     const matchesAvailability = availabilityFilter
-      ? student.availability.includes(availabilityFilter)
+      ? Array.isArray(student.availability)
+        ? student.availability.some((a) =>
+            a.toLowerCase().includes(availabilityFilter.toLowerCase())
+          )
+        : String(student.availability)
+            .toLowerCase()
+            .includes(availabilityFilter.toLowerCase())
       : true;
 
     return matchesSearch && matchesStatus && matchesAvailability;
