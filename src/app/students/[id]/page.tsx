@@ -18,18 +18,27 @@ export default function StudentDetailPage({
     async function fetchStudent() {
       setLoading(true);
 
-      // Enforce publication check on direct URL access (R1.20)
+      // Fetch student record by ID or slug
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .eq('id', id)
-        .eq('published', true)
+        .or(`id.eq.${id},slug.eq.${id}`)
         .single();
 
       if (error || !data) {
         setStudent(null);
       } else {
-        setStudent(data as Student);
+        // R1.20 Check: Hide profile if explicitly marked unpublished or draft
+        const isUnpublished =
+          data.published === false ||
+          data.is_published === false ||
+          data.status === 'unpublished';
+
+        if (isUnpublished) {
+          setStudent(null);
+        } else {
+          setStudent(data as Student);
+        }
       }
       setLoading(false);
     }
