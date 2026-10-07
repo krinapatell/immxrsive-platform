@@ -1,0 +1,71 @@
+﻿{
+  "release": "R1",
+  "target_metadata": {
+    "team_name": "Team 10",
+    "deployed_url": "https://sajal19-sketch.github.io/immxrsive-platform/",
+    "repository_url": "https://github.com/sajal19-sketch/immxrsive-platform",
+    "issues_url": "https://github.com/sajal19-sketch/immxrsive-platform/issues",
+    "target_version": "R1 Submission (GitHub Pages deployment)",
+    "testers": ["Mohammedhamza Saiyed", "Diya Patel", "Krina Patel"]
+  },
+  "scenarios": {
+    "scenario_a": {
+      "status": "PARTIAL",
+      "notes": "Dropdown availability filtering works, but text search for 'Unity' fails to filter student cards. Profile details display in modal pop-ups."
+    },
+    "scenario_b": {
+      "status": "PASS",
+      "notes": "Key skills are explicitly scoped on individual candidate modal cards."
+    },
+    "scenario_c": {
+      "status": "PARTIAL",
+      "notes": "Projects are embedded in profile modals without direct URL routing."
+    },
+    "scenario_d": {
+      "status": "FAIL",
+      "notes": "Text search query input does not filter profiles; dropdown filters operate as expected."
+    },
+    "scenario_e": {
+      "status": "FAIL",
+      "notes": "Profiles are modal-based; direct URLs cannot be copied or reloaded in incognito windows."
+    },
+    "scenario_f": {
+      "status": "PASS",
+      "notes": "Unpublished profiles are hidden from the public directory view."
+    },
+    "scenario_g": {
+      "status": "PASS",
+      "notes": "UI and modal pop-ups adjust correctly on 390px mobile viewports."
+    },
+    "scenario_h": {
+      "status": "PASS",
+      "notes": "Directory controls and modal close buttons are accessible via keyboard navigation."
+    },
+    "scenario_i": {
+      "status": "PARTIAL",
+      "notes": "Exploratory testing identified missing search query handling and lack of deep linking."
+    }
+  },
+  "top_findings": [
+    {
+      "id": "FINDING-01",
+      "title": "Text search input fails to filter student profiles",
+      "severity": "HIGH",
+      "description": "Typing keywords such as 'unity' into the directory search bar does not filter candidate cards."
+    },
+    {
+      "id": "FINDING-02",
+      "title": "Missing direct URLs for candidate profiles and projects",
+      "severity": "HIGH",
+      "description": "Profiles open inside modal dialogs without updating the browser URL, preventing deep-linking and sharing."
+    },
+    {
+      "id": "FINDING-03",
+      "title": "Inability to retain candidate context for employer inquiries",
+      "severity": "MEDIUM",
+      "description": "Due to modal implementation, external sharing or direct linking to an employer inquiry form is unaddressed."
+    }
+  ],
+  "observed_pass": "Dropdown availability filtering functions as intended, isolating candidates based on selected availability criteria.",
+  "conclusion": "Ready with issues"
+}
