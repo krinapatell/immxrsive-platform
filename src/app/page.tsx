@@ -93,7 +93,7 @@ function DirectoryContent() {
     fetchStudents();
   }, []);
 
-  // Multi-term search (AND semantics) + Flexible matching for status & availability options
+  // Multi-term search (AND semantics) matching name, headline, program, and skills
   const filteredStudents = students.filter((student) => {
     let matchesSearch = true;
 
@@ -101,11 +101,12 @@ function DirectoryContent() {
       const terms = search.trim().toLowerCase().split(/\s+/);
       matchesSearch = terms.every((term) => {
         const matchesName = student.name?.toLowerCase().includes(term);
+        const matchesHeadline = student.headline?.toLowerCase().includes(term);
         const matchesProgram = student.program?.toLowerCase().includes(term);
         const matchesSkill = student.skills?.some((skill) =>
           skill.toLowerCase().includes(term)
         );
-        return matchesName || matchesProgram || matchesSkill;
+        return matchesName || matchesHeadline || matchesProgram || matchesSkill;
       });
     }
 
@@ -143,8 +144,8 @@ function DirectoryContent() {
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
         <input
           type="text"
-          placeholder="Search by name, skills (e.g. Unity C#), program..."
-          aria-label="Search candidates by name, skill, or program"
+          placeholder="Search by name, headline, skills, program..."
+          aria-label="Search candidates by name, headline, skill, or program"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
