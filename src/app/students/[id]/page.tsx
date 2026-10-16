@@ -20,7 +20,6 @@ export default function StudentDetailPage() {
       if (!id) return;
       setLoading(true);
 
-      // Fetch student data
       const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('*')
@@ -35,7 +34,6 @@ export default function StudentDetailPage() {
 
       setStudent(studentData as Student);
 
-      // Fetch projects if project_ids array exists
       if (studentData.project_ids && studentData.project_ids.length > 0) {
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
@@ -75,7 +73,6 @@ export default function StudentDetailPage() {
     );
   }
 
-  // Type-safe extraction and sanitization of GitHub link
   const linksData = student.links as unknown as Record<string, any> | string | null;
   let rawGithubUrl: string | null = null;
 
@@ -108,7 +105,6 @@ export default function StudentDetailPage() {
         ← Back to Directory
       </button>
 
-      {/* Main Student Card */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8 mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
@@ -118,7 +114,6 @@ export default function StudentDetailPage() {
             </p>
             <p className="text-gray-700 text-base mt-2">{student.headline}</p>
 
-            {/* Badges: Status & Availability */}
             <div className="flex flex-wrap gap-2 mt-4">
               {student.status && (
                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 capitalize">
@@ -150,7 +145,6 @@ export default function StudentDetailPage() {
           </button>
         </div>
 
-        {/* GitHub Link */}
         {githubUrl && (
           <div className="mt-6 pt-6 border-t border-gray-100 flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">GitHub Profile:</span>
@@ -165,7 +159,6 @@ export default function StudentDetailPage() {
           </div>
         )}
 
-        {/* Skills */}
         {student.skills && student.skills.length > 0 && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">
@@ -185,7 +178,6 @@ export default function StudentDetailPage() {
         )}
       </div>
 
-      {/* Projects Showcase */}
       {projects.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -221,7 +213,6 @@ export default function StudentDetailPage() {
         </div>
       )}
 
-      {/* Employer Inquiry Modal */}
       {showInquiryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-gray-900 text-white rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
