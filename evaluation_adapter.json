@@ -1,14 +1,23 @@
 ﻿{
-  "version": "R1-submission",
-  "routes": {
-    "directory": "/",
-    "studentProfile": "/students/:id",
-    "projectDetail": "/projects/:id"
+  "version": "2.0",
+  "project_option": "public-talent-discovery-platform",
+  "entry_points": {
+    "frontend": "https://your-deployment-url.vercel.app",
+    "api": "https://your-deployment-url.vercel.app/api"
   },
-  "queryParams": {
-    "search": "search",
-    "skills": "skills",
-    "availability": "availability",
-    "status": "status"
+  "roles": {
+    "employer": {
+      "default_account": "employer@test.com",
+      "access_level": "full_search_and_review"
+    },
+    "talent": {
+      "default_account": "talent@test.com",
+      "access_level": "profile_management"
+    }
+  },
+  "checks_mapping": {
+    "search_filters": "/search",
+    "direct_urls": "/talent/[id]",
+    "mobile_employer_workflows": "/mobile"
   }
 }
