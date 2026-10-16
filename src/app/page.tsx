@@ -78,14 +78,11 @@ function DirectoryContent() {
       if (error) {
         console.error('Error fetching students:', error);
       } else if (data) {
-        // Exclude unpublished profiles while safely handling boolean/missing/null schema properties
-        const publishedData = data.filter(
-          (student) =>
-            student.published !== false &&
-            student.is_published !== false &&
-            student.status !== 'unpublished'
+        // Exclude explicitly unpublished profiles while supporting active schema statuses ('current', 'alumni')
+        const visibleData = data.filter(
+          (student) => student.status !== 'unpublished'
         );
-        setStudents(publishedData as Student[]);
+        setStudents(visibleData as Student[]);
       }
       setLoading(false);
     }
