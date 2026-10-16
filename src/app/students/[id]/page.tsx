@@ -75,13 +75,22 @@ export default function StudentDetailPage() {
     );
   }
 
-  // Safely extract GitHub link from student.links json object or string
-  const githubUrl =
+  // Safely extract and sanitize GitHub link from student.links json object or string
+  let rawGithubUrl =
     typeof student.links === 'object' && student.links?.github
       ? student.links.github
       : typeof student.links === 'string'
       ? JSON.parse(student.links || '{}').github
       : null;
+
+  let githubUrl = null;
+  if (rawGithubUrl) {
+    const cleaned = String(rawGithubUrl).trim().replace(/\s+/g, '-');
+    githubUrl =
+      cleaned.startsWith('http://') || cleaned.startsWith('https://')
+        ? cleaned
+        : `https://${cleaned}`;
+  }
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -295,14 +304,3 @@ export default function StudentDetailPage() {
                 <button
                   type="submit"
                   className="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 rounded font-medium text-white"
-                >
-                  Submit Inquiry
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </main>
-  );
-}
