@@ -90,7 +90,7 @@ function DirectoryContent() {
     fetchStudents();
   }, []);
 
-  // Multi-term search (AND semantics) matching name, headline, program, and skills
+  // Multi-term search (AND semantics) matching name, headline, program, skills, projects, certificates, and achievements
   const filteredStudents = students.filter((student) => {
     let matchesSearch = true;
 
@@ -103,7 +103,38 @@ function DirectoryContent() {
         const matchesSkill = student.skills?.some((skill) =>
           skill.toLowerCase().includes(term)
         );
-        return matchesName || matchesHeadline || matchesProgram || matchesSkill;
+
+        // Search inside Projects
+        const matchesProject = student.projects?.some(
+          (proj) =>
+            proj.title?.toLowerCase().includes(term) ||
+            proj.description?.toLowerCase().includes(term) ||
+            proj.tech_stack?.some((t) => t.toLowerCase().includes(term))
+        );
+
+        // Search inside Certificates
+        const matchesCertificate = student.certificates?.some(
+          (cert) =>
+            cert.name?.toLowerCase().includes(term) ||
+            cert.issuer?.toLowerCase().includes(term)
+        );
+
+        // Search inside Achievements
+        const matchesAchievement = student.achievements?.some(
+          (ach) =>
+            ach.title?.toLowerCase().includes(term) ||
+            ach.description?.toLowerCase().includes(term)
+        );
+
+        return (
+          matchesName ||
+          matchesHeadline ||
+          matchesProgram ||
+          matchesSkill ||
+          matchesProject ||
+          matchesCertificate ||
+          matchesAchievement
+        );
       });
     }
 
@@ -141,8 +172,8 @@ function DirectoryContent() {
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
         <input
           type="text"
-          placeholder="Search by name, headline, skills, program..."
-          aria-label="Search candidates by name, headline, skill, or program"
+          placeholder="Search by name, skills, projects, certificates..."
+          aria-label="Search candidates by name, headline, skill, program, projects, or certificates"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
