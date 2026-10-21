@@ -42,7 +42,6 @@ export default function TalentIndexPage() {
   };
 
   const filteredProfiles = profiles.filter((p: any) => {
-    // Search query
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const nameMatch = p.name?.toLowerCase().includes(q);
@@ -52,13 +51,11 @@ export default function TalentIndexPage() {
       if (!nameMatch && !headlineMatch && !programMatch && !skillMatch) return false;
     }
 
-    // Skills AND logic
     if (selectedSkills.length > 0) {
       const hasAllSkills = selectedSkills.every(s => p.skills && p.skills.includes(s));
       if (!hasAllSkills) return false;
     }
 
-    // Availability OR logic
     if (selectedAvailability.length > 0) {
       const hasAvailability = p.availability && p.availability.some((a: string) => selectedAvailability.includes(a));
       if (!hasAvailability) return false;
@@ -69,7 +66,6 @@ export default function TalentIndexPage() {
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#2C2825] p-6 md:p-12">
-      {/* Header */}
       <header className="max-w-6xl mx-auto flex justify-between items-center pb-6 mb-10 border-b border-[#E8E2D9]">
         <div className="flex items-center gap-3">
           <span className="text-xl font-bold text-[#C85A32]">ImmXrsive</span>
@@ -162,13 +158,24 @@ export default function TalentIndexPage() {
                     <div className="flex justify-between items-start mb-2">
                       <h2 className="text-xl font-bold text-stone-900">{student.name}</h2>
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-stone-100 text-stone-600 rounded-md">
-                        {student.status || 'CURRENT'}
+                        {student.status || 'current'}
                       </span>
                     </div>
 
-                    <p className="text-xs text-stone-500 mb-3">
+                    <p className="text-xs text-stone-500 mb-2">
                       {student.program || 'Computer Science'} • {student.department || 'CS & IT'}
                     </p>
+
+                    {/* Availability Badges */}
+                    {student.availability && student.availability.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {student.availability.map((avail: string, idx: number) => (
+                          <span key={idx} className="text-[10px] bg-[#C85A32]/10 text-[#C85A32] font-bold uppercase px-2 py-0.5 rounded-md">
+                            {avail}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="bg-[#FAF7F2] p-3 rounded-xl mb-4">
                       <p className="text-sm font-medium text-stone-800 line-clamp-2">
@@ -188,7 +195,7 @@ export default function TalentIndexPage() {
                   </div>
 
                   <Link
-                    href={/student/}
+                    href={`/student/${studentSlug}`}
                     className="w-full text-center bg-[#C85A32] hover:bg-[#b04d2a] text-white text-xs font-bold py-2.5 rounded-xl transition block shadow-sm"
                   >
                     View Full Profile & Projects →
