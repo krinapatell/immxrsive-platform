@@ -7,7 +7,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function GET() {
   const { data, error } = await supabase
-    .from('student_profiles')
+    .from('students')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const { data, error } = await supabase
-      .from('student_profiles')
+      .from('students')
       .insert([{ full_name, email, program, department, bio, skills, project_title, project_description, deployment_url, repository_url }])
       .select()
       .single();
