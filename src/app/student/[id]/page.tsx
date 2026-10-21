@@ -1,11 +1,12 @@
 ﻿'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const studentId = resolvedParams.id;
+export default function StudentDetailPage() {
+  const params = useParams();
+  const studentId = params?.id as string;
 
   const [student, setStudent] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
@@ -14,16 +15,20 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [inquiryMessage, setInquiryMessage] = useState('');
 
   useEffect(() => {
+    if (!studentId) return;
+
     async function fetchStudentData() {
       try {
         const res = await fetch('/api/profiles');
         const data = await res.json();
         if (data.profiles) {
-          const match = data.profiles.find((p: any) => p.id === studentId);
+          const match = data.profiles.find((p: any) => 
+            p.id?.toString() === studentId ||
+            p.name?.toLowerCase().replace(/\s+/g, '-') === studentId.toLowerCase()
+          );
           setStudent(match || null);
         }
         if (data.projects) {
-          // Filter projects where student is listed or contributor
           setProjects(data.projects);
         }
       } catch (err) {
@@ -47,6 +52,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     return (
       <main className="min-h-screen bg-[#F8F9FC] p-12 text-center text-slate-800">
         <h1 className="text-2xl font-bold mb-4">404 — Student Profile Not Found</h1>
+        <p className="text-slate-500 mb-6">The requested candidate profile could not be found.</p>
         <Link href="/" className="text-[#6366F1] font-semibold hover:underline">
           ← Back to Directory
         </Link>
@@ -131,7 +137,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {projects.map((proj: any) => (
-                <div key={proj.id} className="border border-slate-200 rounded-xl p-5 bg-slate-50">
+                <div key={proj.id || proj.title} className="border border-slate-200 rounded-xl p-5 bg-slate-50">
                   <h3 className="font-bold text-slate-900 mb-1">{proj.title || 'Project Work'}</h3>
                   <p className="text-xs text-slate-600 mb-3">{proj.description || 'Immersive/Software application evidence.'}</p>
                   {proj.repository_url && (
@@ -145,7 +151,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        {/* Employer Contextual Inquiry */}
+        {/* Contextual Employer Inquiry Form */}
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-2">Initiate Employer Inquiry</h2>
           <p className="text-sm text-slate-500 mb-6">
