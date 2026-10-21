@@ -6,6 +6,7 @@ import Link from 'next/link';
 export default function TalentIndexPage() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,12 @@ export default function TalentIndexPage() {
   };
 
   const filteredProfiles = profiles.filter((p: any) => {
+    // Status Filter (R1.08)
+    if (selectedStatus !== 'All') {
+      if (p.status?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+    }
+
+    // Case-insensitive Search
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const nameMatch = p.name?.toLowerCase().includes(q);
@@ -51,11 +58,13 @@ export default function TalentIndexPage() {
       if (!nameMatch && !headlineMatch && !programMatch && !skillMatch) return false;
     }
 
+    // Skills AND logic (R1.06)
     if (selectedSkills.length > 0) {
       const hasAllSkills = selectedSkills.every(s => p.skills && p.skills.includes(s));
       if (!hasAllSkills) return false;
     }
 
+    // Availability OR logic (R1.07)
     if (selectedAvailability.length > 0) {
       const hasAvailability = p.availability && p.availability.some((a: string) => selectedAvailability.includes(a));
       if (!hasAvailability) return false;
@@ -97,17 +106,31 @@ export default function TalentIndexPage() {
             <input
               type="text"
               placeholder="Search by name, headline, or program..."
-              className="w-full md:w-96 p-3 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+              className="w-full md:w-80 p-3 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
 
-            <div className="text-sm text-stone-500 font-medium">
-              Showing <strong>{filteredProfiles.length}</strong> matches
+            {/* Status Dropdown Filter (R1.08) */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <label className="text-xs font-bold text-stone-500 uppercase">Status:</label>
+              <select
+                value={selectedStatus}
+                onChange={e => setSelectedStatus(e.target.value)}
+                className="p-3 rounded-xl border border-[#E8E2D9] bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+              >
+                <option value="All">All Statuses</option>
+                <option value="current">Current Student</option>
+                <option value="alumni">Alumni</option>
+              </select>
+
+              <div className="text-sm text-stone-500 font-medium ml-2">
+                <strong>{filteredProfiles.length}</strong> matches
+              </div>
             </div>
           </div>
 
-          {/* Availability Filters */}
+          {/* Availability Filters (R1.07) */}
           <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mr-2">Availability (OR):</span>
             {['internship', 'full-time', 'contract'].map(avail => (
@@ -121,7 +144,7 @@ export default function TalentIndexPage() {
             ))}
           </div>
 
-          {/* Standardized Skill Filters */}
+          {/* Standardized Skill Filters (R1.05) */}
           {allSkills.length > 0 && (
             <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mr-2">Skills (AND):</span>

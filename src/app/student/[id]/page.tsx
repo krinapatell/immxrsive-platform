@@ -9,7 +9,7 @@ export default function StudentDetailPage() {
   const studentId = params?.id as string;
 
   const [student, setStudent] = useState<any>(null);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [studentProjects, setStudentProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [inquirySent, setInquirySent] = useState(false);
   const [inquiryMessage, setInquiryMessage] = useState('');
@@ -27,9 +27,19 @@ export default function StudentDetailPage() {
             p.name?.toLowerCase().replace(/\s+/g, '-') === studentId.toLowerCase()
           );
           setStudent(match || null);
-        }
-        if (data.projects) {
-          setProjects(data.projects);
+
+          // R1.14 & R1.16: Filter projects belonging specifically to this student
+          if (data.projects && match) {
+            const filtered = data.projects.filter((proj: any) => {
+              const studentMatchesId = proj.student_id === match.id;
+              const studentMatchesName = proj.author?.toLowerCase() === match.name?.toLowerCase();
+              const studentInContributors = proj.contributors && proj.contributors.some((c: any) => 
+                c.student_id === match.id || c.name?.toLowerCase() === match.name?.toLowerCase()
+              );
+              return studentMatchesId || studentMatchesName || studentInContributors;
+            });
+            setStudentProjects(filtered);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -42,7 +52,7 @@ export default function StudentDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F8F9FC] p-12 text-center text-slate-500 font-medium">
+      <main className="min-h-screen bg-[#FAF7F2] p-12 text-center text-stone-500 font-medium">
         Loading student profile...
       </main>
     );
@@ -50,10 +60,10 @@ export default function StudentDetailPage() {
 
   if (!student) {
     return (
-      <main className="min-h-screen bg-[#F8F9FC] p-12 text-center text-slate-800">
+      <main className="min-h-screen bg-[#FAF7F2] p-12 text-center text-stone-800">
         <h1 className="text-2xl font-bold mb-4">404 — Student Profile Not Found</h1>
-        <p className="text-slate-500 mb-6">The requested candidate profile could not be found.</p>
-        <Link href="/" className="text-[#6366F1] font-semibold hover:underline">
+        <p className="text-stone-500 mb-6">The requested candidate profile could not be found.</p>
+        <Link href="/" className="text-[#C85A32] font-semibold hover:underline">
           ← Back to Directory
         </Link>
       </main>
@@ -63,26 +73,26 @@ export default function StudentDetailPage() {
   const placeholderText = "Describe opportunity for " + (student.name || "candidate") + "...";
 
   return (
-    <main className="min-h-screen bg-[#F8F9FC] text-[#1E293B]">
-      <header className="border-b border-slate-200 bg-white px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-[#6366F1]">
+    <main className="min-h-screen bg-[#FAF7F2] text-[#2C2825] p-6 md:p-12">
+      <header className="max-w-5xl mx-auto flex justify-between items-center pb-6 mb-8 border-b border-[#E8E2D9]">
+        <Link href="/" className="text-xl font-bold text-[#C85A32]">
           ImmXrsive
         </Link>
-        <Link href="/" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+        <Link href="/" className="text-sm font-semibold text-stone-600 hover:text-stone-900">
           ← Back to Directory
         </Link>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        {/* Profile Card / Professional Shell */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Professional Shell (R1.13) */}
+        <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-              <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-md">
-                {student.status || 'Current Student'}
+              <span className="text-xs uppercase tracking-wider font-bold text-stone-600 bg-stone-100 px-3 py-1 rounded-md">
+                {student.status || 'current'}
               </span>
-              <h1 className="text-3xl font-extrabold text-slate-900 mt-2">{student.name}</h1>
-              <p className="text-sm font-medium text-[#6366F1] mt-1">
+              <h1 className="text-3xl font-extrabold text-stone-900 mt-2">{student.name}</h1>
+              <p className="text-sm font-medium text-[#C85A32] mt-1">
                 {student.program || 'Computer Science'} • {student.department || 'CS & IT'}
               </p>
             </div>
@@ -90,7 +100,7 @@ export default function StudentDetailPage() {
             {student.availability && (
               <div className="flex flex-wrap gap-2">
                 {student.availability.map((avail: string, idx: number) => (
-                  <span key={idx} className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-3 py-1 rounded-full capitalize">
+                  <span key={idx} className="bg-[#C85A32]/10 text-[#C85A32] text-xs font-bold uppercase px-3 py-1 rounded-md capitalize">
                     {avail}
                   </span>
                 ))}
@@ -98,17 +108,17 @@ export default function StudentDetailPage() {
             )}
           </div>
 
-          <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mb-6">
-            <h2 className="text-xs font-bold uppercase text-slate-400 mb-1">Headline / Bio</h2>
-            <p className="text-slate-800 font-medium text-sm">{student.headline}</p>
+          <div className="bg-[#FAF7F2] p-4 rounded-xl mb-6">
+            <h2 className="text-xs font-bold uppercase text-stone-400 mb-1">Headline / Bio</h2>
+            <p className="text-stone-800 font-medium text-sm">{student.headline}</p>
           </div>
 
           {student.skills && student.skills.length > 0 && (
             <div className="mb-6">
-              <h2 className="text-xs font-bold uppercase text-slate-400 mb-2">Verified Skills</h2>
+              <h2 className="text-xs font-bold uppercase text-stone-400 mb-2">Verified Skills</h2>
               <div className="flex flex-wrap gap-2">
                 {student.skills.map((skill: string, i: number) => (
-                  <span key={i} className="bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                  <span key={i} className="bg-stone-100 text-stone-700 text-xs px-3 py-1.5 rounded-lg font-medium">
                     {skill}
                   </span>
                 ))}
@@ -116,34 +126,36 @@ export default function StudentDetailPage() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-100 text-sm font-semibold">
+          <div className="flex flex-wrap gap-4 pt-4 border-t border-stone-100 text-sm font-semibold">
             {student.deployment_url && (
-              <a href={student.deployment_url} target="_blank" rel="noreferrer" className="text-[#6366F1] hover:underline">
+              <a href={student.deployment_url} target="_blank" rel="noreferrer" className="text-[#C85A32] hover:underline">
                 Live Deployment ↗
               </a>
             )}
             {student.repository_url && (
-              <a href={student.repository_url} target="_blank" rel="noreferrer" className="text-slate-700 hover:underline">
+              <a href={student.repository_url} target="_blank" rel="noreferrer" className="text-stone-700 hover:underline">
                 GitHub Repository ↗
               </a>
             )}
           </div>
         </div>
 
-        {/* Project Evidence Section */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <h2 className="text-xl font-bold mb-4">Project Evidence & Portfolio Work</h2>
+        {/* Student-Specific Project Evidence (R1.14, R1.17) */}
+        <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
+          <h2 className="text-xl font-bold mb-4">Project Evidence for {student.name}</h2>
           
-          {projects.length === 0 ? (
-            <p className="text-slate-500 text-sm">No specific projects linked yet.</p>
+          {studentProjects.length === 0 ? (
+            <div className="p-6 bg-[#FAF7F2] rounded-xl text-center text-stone-500 text-sm">
+              No specific project evidence uploaded for this student yet.
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projects.map((proj: any) => (
-                <div key={proj.id || proj.title} className="border border-slate-200 rounded-xl p-5 bg-slate-50">
-                  <h3 className="font-bold text-slate-900 mb-1">{proj.title || 'Project Work'}</h3>
-                  <p className="text-xs text-slate-600 mb-3">{proj.description || 'Immersive/Software application evidence.'}</p>
+              {studentProjects.map((proj: any) => (
+                <div key={proj.id || proj.title} className="border border-[#E8E2D9] rounded-xl p-5 bg-[#FAF7F2]">
+                  <h3 className="font-bold text-stone-900 mb-1">{proj.title}</h3>
+                  <p className="text-xs text-stone-600 mb-3">{proj.description}</p>
                   {proj.repository_url && (
-                    <a href={proj.repository_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#6366F1] hover:underline">
+                    <a href={proj.repository_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#C85A32] hover:underline">
                       Inspect Repository ↗
                     </a>
                   )}
@@ -153,10 +165,10 @@ export default function StudentDetailPage() {
           )}
         </div>
 
-        {/* Contextual Employer Inquiry Form */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <h2 className="text-xl font-bold mb-2">Initiate Employer Inquiry</h2>
-          <p className="text-sm text-slate-500 mb-6">
+        {/* Contextual Employer Inquiry (R1.18) */}
+        <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
+          <h2 className="text-xl font-bold mb-2">Initiate Contextual Employer Inquiry</h2>
+          <p className="text-sm text-stone-500 mb-6">
             Inquire about working with <strong>{student.name}</strong>. Profile context will automatically attach to your submission.
           </p>
 
@@ -167,15 +179,15 @@ export default function StudentDetailPage() {
           ) : (
             <form onSubmit={e => { e.preventDefault(); setInquirySent(true); }} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Company Email</label>
-                <input required type="email" placeholder="recruiter@company.com" className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-[#6366F1] focus:outline-none" />
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Company Email</label>
+                <input required type="email" placeholder="recruiter@company.com" className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Message</label>
-                <textarea required rows={3} value={inquiryMessage} onChange={e => setInquiryMessage(e.target.value)} placeholder={placeholderText} className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-[#6366F1] focus:outline-none" />
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Message</label>
+                <textarea required rows={3} value={inquiryMessage} onChange={e => setInquiryMessage(e.target.value)} placeholder={placeholderText} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
               </div>
-              <button type="submit" className="bg-[#6366F1] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#4F46E5] transition">
-                Submit Inquiry →
+              <button type="submit" className="bg-[#C85A32] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#b04d2a] transition">
+                Submit Contextual Inquiry →
               </button>
             </form>
           )}

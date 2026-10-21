@@ -10,10 +10,12 @@ export default function StudentPortal() {
   const [otp, setOtp] = useState('');
   const [emailError, setEmailError] = useState('');
 
-  // Profile Form State
+  // Profile Form State (R2.11)
   const [profile, setProfile] = useState({
     name: 'Krina Patel',
-    headline: 'Full-stack & Spatial Computing Developer',
+    headline: 'Computer Science & IT Student',
+    status: 'current',
+    availability: ['internship'],
     github_url: 'https://github.com/krinapatell',
     linkedin_url: 'https://linkedin.com/in/krinapatel',
     deployment_url: 'https://immxrsive-platform-o787.vercel.app',
@@ -26,7 +28,7 @@ export default function StudentPortal() {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // R2.04 & R2.05 Domain Enforcement & Test Mode OTP Generation
+  // Domain Verification (R2.04, R2.05)
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
@@ -37,7 +39,6 @@ export default function StudentPortal() {
       return;
     }
 
-    // Generate test mode OTP so tester sees it immediately
     const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedCode(mockCode);
     setStep('otp');
@@ -47,9 +48,16 @@ export default function StudentPortal() {
     e.preventDefault();
     if (otp === generatedCode || otp.length >= 4) {
       setStep('editor');
-    } else {
-      alert('Invalid verification code. Please check the code shown above.');
     }
+  };
+
+  const toggleAvailabilityOption = (option: string) => {
+    setProfile(prev => ({
+      ...prev,
+      availability: prev.availability.includes(option)
+        ? prev.availability.filter(a => a !== option)
+        : [...prev.availability, option]
+    }));
   };
 
   const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,10 +75,21 @@ export default function StudentPortal() {
     setExtractedSkills(extractedSkills.filter(s => s !== skill));
   };
 
-  const handleSave = (publish: boolean) => {
-    setProfile({ ...profile, is_published: publish });
-    setSaveMessage(publish ? 'Profile published to directory!' : 'Draft saved privately.');
-    setTimeout(() => setSaveMessage(''), 3000);
+  const handleSave = async (publish: boolean) => {
+    const updated = { ...profile, is_published: publish };
+    setProfile(updated);
+
+    try {
+      await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      setSaveMessage(publish ? '✓ Profile published to talent directory!' : '✓ Draft saved privately.');
+      setTimeout(() => setSaveMessage(''), 4000);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -97,7 +116,7 @@ export default function StudentPortal() {
               onClick={() => setStep('editor')}
               className="w-full bg-stone-900 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-black transition"
             >
-              Sign in with GitHub
+              Sign in with GitHub →
             </button>
 
             <div className="relative border-t border-[#E8E2D9] my-4">
@@ -132,7 +151,7 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 2: OTP Entry with Test Mode Display */}
+        {/* STEP 2: OTP Entry */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
@@ -140,15 +159,14 @@ export default function StudentPortal() {
               Affiliation challenge sent to <strong>{email}</strong>.
             </p>
 
-            {/* Test Mode Notification Box so tester never gets stuck */}
             <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs font-medium space-y-1">
-              <p className="font-bold uppercase tracking-wider">Test Mode Active (Instructor-Approved):</p>
+              <p className="font-bold uppercase tracking-wider">Test Mode Active:</p>
               <p>Your single-use verification code is: <span className="font-mono font-bold text-base text-[#C85A32]">{generatedCode}</span></p>
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter 6-Digit Code</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter Code</label>
                 <input
                   type="text"
                   required
@@ -166,12 +184,12 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 3: Profile Editor, Resume Attachment, Links */}
+        {/* STEP 3: Complete Self-Service Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
               <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm font-semibold">
-                ✓ {saveMessage}
+                {saveMessage}
               </div>
             )}
 
@@ -211,11 +229,41 @@ export default function StudentPortal() {
 
             {/* Profile Information & Professional Links */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm space-y-4">
-              <h2 className="font-bold text-stone-900 border-b border-stone-100 pb-3">Professional Profile Fields</h2>
+              <h2 className="font-bold text-stone-900 border-b border-stone-100 pb-3">Maintain Professional Profile</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Full Name</label>
+                  <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Status</label>
+                  <select
+                    value={profile.status}
+                    onChange={e => setProfile({...profile, status: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] bg-white text-sm font-medium focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  >
+                    <option value="current">Current Student</option>
+                    <option value="alumni">Alumni</option>
+                  </select>
+                </div>
+              </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Name</label>
-                <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Availability Options</label>
+                <div className="flex flex-wrap gap-2">
+                  {['internship', 'full-time', 'contract'].map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => toggleAvailabilityOption(opt)}
+                      className={"px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition " + (profile.availability.includes(opt) ? 'bg-[#C85A32] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200')}
+                    >
+                      {opt} {profile.availability.includes(opt) && '✓'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
