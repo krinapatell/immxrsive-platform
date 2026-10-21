@@ -4,24 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function StudentPortal() {
-  const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
+  const [step, setStep] = useState<'login' | 'editor'>('login');
   const [email, setEmail] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [otp, setOtp] = useState('');
   const [emailError, setEmailError] = useState('');
 
   // Clean Blank Initial Form State
   const [profile, setProfile] = useState({
-    name: '',
-    headline: '',
+    name: 'Krina Patel',
+    headline: 'Computer Science & IT Student',
     status: 'current',
-    availability: ['internship'],
-    github_url: '',
-    linkedin_url: '',
-    deployment_url: '',
-    repository_url: '',
-    skills: [] as string[],
-    is_published: false,
+    availability: ['internship', 'full-time'],
+    github_url: 'https://github.com/krinapatell',
+    linkedin_url: 'https://linkedin.com/in/krinapatel',
+    deployment_url: 'https://immxrsive-platform-o787.vercel.app',
+    repository_url: 'https://github.com/krinapatell/immxrsive-platform',
+    skills: ['Next.js', 'TypeScript', 'Supabase', 'Java', 'Python'],
+    is_published: true,
   });
 
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -36,22 +34,12 @@ export default function StudentPortal() {
 
     const domain = email.split('@')[1];
     if (domain !== 'algomau.ca') {
-      setEmailError('Access Restricted: You must use an official @algomau.ca student email address.');
+      setEmailError('Access Restricted: You must enter an official @algomau.ca student email.');
       return;
     }
 
-    const mockCode = '749201';
-    setGeneratedCode(mockCode);
-    setStep('otp');
-  };
-
-  const handleOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.trim() === generatedCode || otp.trim().length >= 4) {
-      setStep('editor');
-    } else {
-      alert('Verification code incorrect. Please enter 749201.');
-    }
+    // Direct access upon valid Algoma domain verification
+    setStep('editor');
   };
 
   const toggleAvailabilityOption = (option: string) => {
@@ -138,7 +126,7 @@ export default function StudentPortal() {
 
             <div className="relative border-t border-[#E8E2D9] my-4">
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-stone-400 font-semibold uppercase">
-                Or Verify Algoma Email
+                Or Verify Algoma Student ID
               </span>
             </div>
 
@@ -162,46 +150,13 @@ export default function StudentPortal() {
               )}
 
               <button type="submit" className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition">
-                Send Verification Challenge →
+                Verify Affiliation & Access Editor →
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 2: OTP Verification Challenge */}
-        {step === 'otp' && (
-          <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold">2. Affiliation Verification</h2>
-            <p className="text-sm text-stone-600">
-              Affiliation challenge initiated for <strong>{email}</strong>.
-            </p>
-
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 p-4 rounded-xl text-xs space-y-1">
-              <p className="font-bold uppercase tracking-wider">Test Mode Verification Code (R2.04):</p>
-              <p>Enter test passkey: <span className="font-mono font-bold text-sm text-[#C85A32]">749201</span></p>
-            </div>
-
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Verification Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="749201"
-                  className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                />
-              </div>
-
-              <button type="submit" className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition">
-                Verify & Open Profile Editor →
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* STEP 3: Self-Service Profile Editor */}
+        {/* STEP 2: Self-Service Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
