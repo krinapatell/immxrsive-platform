@@ -60,6 +60,8 @@ export default function StudentDetailPage() {
     );
   }
 
+  const placeholderText = "Describe opportunity for " + (student.name || "candidate") + "...";
+
   return (
     <main className="min-h-screen bg-[#F8F9FC] text-[#1E293B]">
       <header className="border-b border-slate-200 bg-white px-8 py-4 flex justify-between items-center">
@@ -170,7 +172,7 @@ export default function StudentDetailPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Message</label>
-                <textarea required rows={3} value={inquiryMessage} onChange={e => setInquiryMessage(e.target.value)} placeholder={Describe opportunity for ...} className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-[#6366F1] focus:outline-none" />
+                <textarea required rows={3} value={inquiryMessage} onChange={e => setInquiryMessage(e.target.value)} placeholder={placeholderText} className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-[#6366F1] focus:outline-none" />
               </div>
               <button type="submit" className="bg-[#6366F1] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#4F46E5] transition">
                 Submit Inquiry →
