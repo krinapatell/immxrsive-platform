@@ -6,6 +6,7 @@ import Link from 'next/link';
 export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
   const [email, setEmail] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
   const [otp, setOtp] = useState('');
   const [emailError, setEmailError] = useState('');
 
@@ -35,19 +36,21 @@ export default function StudentPortal() {
 
     const domain = email.split('@')[1];
     if (domain !== 'algomau.ca') {
-      setEmailError('Access Restricted: You must use an official @algomau.ca student email.');
+      setEmailError('Access Restricted: You must use an official @algomau.ca student email address.');
       return;
     }
 
+    const mockCode = '749201';
+    setGeneratedCode(mockCode);
     setStep('otp');
   };
 
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.trim().length >= 4) {
+    if (otp.trim() === generatedCode || otp.trim().length >= 4) {
       setStep('editor');
     } else {
-      alert('Please enter a valid 6-digit verification code.');
+      alert('Verification code incorrect. Please enter 749201.');
     }
   };
 
@@ -91,13 +94,16 @@ export default function StudentPortal() {
     setProfile(updated);
 
     try {
-      await fetch('/api/profiles', {
+      const res = await fetch('/api/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated)
       });
-      setSaveMessage(publish ? '✓ Profile published to talent directory!' : '✓ Draft saved privately.');
-      setTimeout(() => setSaveMessage(''), 4000);
+
+      if (res.ok) {
+        setSaveMessage(publish ? '✓ Profile published to talent directory!' : '✓ Draft saved privately.');
+        setTimeout(() => setSaveMessage(''), 4000);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -156,27 +162,32 @@ export default function StudentPortal() {
               )}
 
               <button type="submit" className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition">
-                Send Verification Code →
+                Send Verification Challenge →
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 2: OTP Entry */}
+        {/* STEP 2: OTP Verification Challenge */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
+            <h2 className="text-lg font-bold">2. Affiliation Verification</h2>
             <p className="text-sm text-stone-600">
-              A 6-digit verification code was sent to <strong>{email}</strong>. Check your inbox and enter the code below to continue.
+              Affiliation challenge initiated for <strong>{email}</strong>.
             </p>
+
+            <div className="bg-blue-50 border border-blue-200 text-blue-900 p-4 rounded-xl text-xs space-y-1">
+              <p className="font-bold uppercase tracking-wider">Test Mode Verification Code (R2.04):</p>
+              <p>Enter test passkey: <span className="font-mono font-bold text-sm text-[#C85A32]">749201</span></p>
+            </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter Verification Code</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Verification Code</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. 123456"
+                  placeholder="749201"
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
@@ -184,13 +195,13 @@ export default function StudentPortal() {
               </div>
 
               <button type="submit" className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition">
-                Verify OTP & Access Profile Editor →
+                Verify & Open Profile Editor →
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 3: Clean Profile Editor */}
+        {/* STEP 3: Self-Service Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
@@ -199,7 +210,7 @@ export default function StudentPortal() {
               </div>
             )}
 
-            {/* Resume Upload & Extraction */}
+            {/* Resume Upload & Parsing */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm">
               <h2 className="font-bold text-stone-900 mb-1">Attach Resume (PDF)</h2>
               <p className="text-xs text-stone-500 mb-4">Upload fixture or custom resume to extract skills for candidate review.</p>
