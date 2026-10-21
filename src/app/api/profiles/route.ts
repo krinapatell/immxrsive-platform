@@ -8,8 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export async function GET() {
   const { data, error } = await supabase
     .from('students')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .select('*');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -21,15 +20,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { full_name, email, program, department, bio, skills, project_title, project_description, deployment_url, repository_url } = body;
-
-    if (!full_name || !email || !project_title || !deployment_url) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const { name, email, program, department, headline, skills, deployment_url, repository_url } = body;
 
     const { data, error } = await supabase
       .from('students')
-      .insert([{ full_name, email, program, department, bio, skills, project_title, project_description, deployment_url, repository_url }])
+      .insert([{ name, email, program, department, headline, skills, deployment_url, repository_url }])
       .select()
       .single();
 

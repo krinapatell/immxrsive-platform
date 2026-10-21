@@ -31,9 +31,9 @@ export default function TalentIndexPage() {
 
   const filteredProfiles = profiles.filter((p: any) => {
     const matchesSearch = 
-      p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.project_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.department?.toLowerCase().includes(searchQuery.toLowerCase());
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.program?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesSkill = selectedSkill === 'All' || (p.skills && p.skills.includes(selectedSkill));
 
@@ -68,7 +68,7 @@ export default function TalentIndexPage() {
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
           <input
             type="text"
-            placeholder="Search by name, project, or department..."
+            placeholder="Search by name, headline, or program..."
             className="w-full md:w-96 p-3 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -106,7 +106,7 @@ export default function TalentIndexPage() {
           <div className="text-center py-20 text-stone-400">Loading talent index...</div>
         ) : filteredProfiles.length === 0 ? (
           <div className="text-center py-16 bg-white border border-[#E8E2D9] rounded-2xl text-stone-500">
-            No published talent matches your filter criteria. Be the first to publish at <a href="/student" className="text-[#C85A32] underline font-medium">/student</a>!
+            No published talent matches your filter criteria.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -114,16 +114,15 @@ export default function TalentIndexPage() {
               <div key={profile.id} className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg">{profile.full_name}</h3>
+                    <h3 className="font-semibold text-lg">{profile.name}</h3>
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-stone-100 text-stone-600 rounded-md">
-                      Verified
+                      {profile.status || 'Verified'}
                     </span>
                   </div>
-                  <p className="text-xs text-stone-500 mb-3">{profile.program} • {profile.department}</p>
+                  <p className="text-xs text-stone-500 mb-3">{profile.program || 'Student'} • {profile.department || 'CS & IT'}</p>
                   
                   <div className="bg-[#FAF7F2] p-3 rounded-xl mb-3">
-                    <p className="font-medium text-stone-800 text-sm">{profile.project_title}</p>
-                    <p className="text-stone-600 text-xs mt-1 line-clamp-2">{profile.project_description || 'No description provided.'}</p>
+                    <p className="font-medium text-stone-800 text-sm">{profile.headline || 'Talent Profile'}</p>
                   </div>
 
                   {profile.skills && profile.skills.length > 0 && (
