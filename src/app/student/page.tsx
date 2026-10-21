@@ -6,48 +6,48 @@ import Link from 'next/link';
 export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
   const [email, setEmail] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
   const [otp, setOtp] = useState('');
   const [emailError, setEmailError] = useState('');
 
-  // Profile Form State (R2.11)
+  // Clean Blank Initial Form State
   const [profile, setProfile] = useState({
-    name: 'Krina Patel',
-    headline: 'Computer Science & IT Student',
+    name: '',
+    headline: '',
     status: 'current',
     availability: ['internship'],
-    github_url: 'https://github.com/krinapatell',
-    linkedin_url: 'https://linkedin.com/in/krinapatel',
-    deployment_url: 'https://immxrsive-platform-o787.vercel.app',
-    repository_url: 'https://github.com/krinapatell/immxrsive-platform',
-    skills: ['React', 'Next.js', 'TypeScript', 'Java', 'Python', 'Supabase'],
-    is_published: true,
+    github_url: '',
+    linkedin_url: '',
+    deployment_url: '',
+    repository_url: '',
+    skills: [] as string[],
+    is_published: false,
   });
 
+  const [newSkillInput, setNewSkillInput] = useState('');
   const [resumeName, setResumeName] = useState<string | null>(null);
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Domain Verification (R2.04, R2.05)
+  // Algoma Email Domain Check (R2.04, R2.05)
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
 
     const domain = email.split('@')[1];
     if (domain !== 'algomau.ca') {
-      setEmailError('Access Restricted: You must use an official @algomau.ca student address.');
+      setEmailError('Access Restricted: You must use an official @algomau.ca student email.');
       return;
     }
 
-    const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedCode(mockCode);
     setStep('otp');
   };
 
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp === generatedCode || otp.length >= 4) {
+    if (otp.trim().length >= 4) {
       setStep('editor');
+    } else {
+      alert('Please enter a valid 6-digit verification code.');
     }
   };
 
@@ -64,7 +64,7 @@ export default function StudentPortal() {
     const file = e.target.files?.[0];
     if (file) {
       setResumeName(file.name);
-      setExtractedSkills(['C#', 'Unity', 'FastAPI', 'WebXR']);
+      setExtractedSkills(['C#', 'Unity', 'React', 'FastAPI']);
     }
   };
 
@@ -73,6 +73,17 @@ export default function StudentPortal() {
       setProfile({ ...profile, skills: [...profile.skills, skill] });
     }
     setExtractedSkills(extractedSkills.filter(s => s !== skill));
+  };
+
+  const addCustomSkill = () => {
+    if (newSkillInput && !profile.skills.includes(newSkillInput)) {
+      setProfile({ ...profile, skills: [...profile.skills, newSkillInput] });
+      setNewSkillInput('');
+    }
+  };
+
+  const removeSkill = (s: string) => {
+    setProfile({ ...profile, skills: profile.skills.filter(item => item !== s) });
   };
 
   const handleSave = async (publish: boolean) => {
@@ -121,7 +132,7 @@ export default function StudentPortal() {
 
             <div className="relative border-t border-[#E8E2D9] my-4">
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-stone-400 font-semibold uppercase">
-                Or Verify Algoma ID
+                Or Verify Algoma Email
               </span>
             </div>
 
@@ -155,22 +166,17 @@ export default function StudentPortal() {
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
-            <p className="text-xs text-stone-600">
-              Affiliation challenge sent to <strong>{email}</strong>.
+            <p className="text-sm text-stone-600">
+              A 6-digit verification code was sent to <strong>{email}</strong>. Check your inbox and enter the code below to continue.
             </p>
-
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs font-medium space-y-1">
-              <p className="font-bold uppercase tracking-wider">Test Mode Active:</p>
-              <p>Your single-use verification code is: <span className="font-mono font-bold text-base text-[#C85A32]">{generatedCode}</span></p>
-            </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter Code</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter Verification Code</label>
                 <input
                   type="text"
                   required
-                  placeholder={generatedCode}
+                  placeholder="e.g. 123456"
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
@@ -184,7 +190,7 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 3: Complete Self-Service Profile Editor */}
+        {/* STEP 3: Clean Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
@@ -193,7 +199,7 @@ export default function StudentPortal() {
               </div>
             )}
 
-            {/* Resume Upload & Parsing */}
+            {/* Resume Upload & Extraction */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm">
               <h2 className="font-bold text-stone-900 mb-1">Attach Resume (PDF)</h2>
               <p className="text-xs text-stone-500 mb-4">Upload fixture or custom resume to extract skills for candidate review.</p>
@@ -227,14 +233,20 @@ export default function StudentPortal() {
               )}
             </div>
 
-            {/* Profile Information & Professional Links */}
+            {/* Profile Form */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm space-y-4">
               <h2 className="font-bold text-stone-900 border-b border-stone-100 pb-3">Maintain Professional Profile</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Full Name</label>
-                  <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Krina Patel"
+                    value={profile.name}
+                    onChange={e => setProfile({...profile, name: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  />
                 </div>
 
                 <div>
@@ -268,28 +280,82 @@ export default function StudentPortal() {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Headline</label>
-                <input type="text" value={profile.headline} onChange={e => setProfile({...profile, headline: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                <input
+                  type="text"
+                  placeholder="e.g. Computer Science & Spatial Computing Student"
+                  value={profile.headline}
+                  onChange={e => setProfile({...profile, headline: e.target.value})}
+                  className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Skills</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {profile.skills.map(sk => (
+                    <span key={sk} className="bg-stone-100 text-stone-700 text-xs px-3 py-1 rounded-lg flex items-center gap-2">
+                      {sk}
+                      <button onClick={() => removeSkill(sk)} className="text-stone-400 hover:text-stone-800 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add skill..."
+                    value={newSkillInput}
+                    onChange={e => setNewSkillInput(e.target.value)}
+                    className="p-2.5 rounded-xl border border-[#E8E2D9] text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32] flex-1"
+                  />
+                  <button onClick={addCustomSkill} type="button" className="bg-stone-800 text-white px-4 py-2.5 rounded-xl text-xs font-medium hover:bg-black transition">
+                    Add
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">GitHub Profile Link</label>
-                  <input type="url" value={profile.github_url} onChange={e => setProfile({...profile, github_url: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                  <input
+                    type="url"
+                    placeholder="https://github.com/your-username"
+                    value={profile.github_url}
+                    onChange={e => setProfile({...profile, github_url: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">LinkedIn Profile Link</label>
-                  <input type="url" value={profile.linkedin_url} onChange={e => setProfile({...profile, linkedin_url: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                  <input
+                    type="url"
+                    placeholder="https://linkedin.com/in/your-username"
+                    value={profile.linkedin_url}
+                    onChange={e => setProfile({...profile, linkedin_url: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Deployment URL</label>
-                  <input type="url" value={profile.deployment_url} onChange={e => setProfile({...profile, deployment_url: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                  <input
+                    type="url"
+                    placeholder="https://your-portfolio.vercel.app"
+                    value={profile.deployment_url}
+                    onChange={e => setProfile({...profile, deployment_url: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Repository URL</label>
-                  <input type="url" value={profile.repository_url} onChange={e => setProfile({...profile, repository_url: e.target.value})} className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none" />
+                  <input
+                    type="url"
+                    placeholder="https://github.com/your-username/your-repo"
+                    value={profile.repository_url}
+                    onChange={e => setProfile({...profile, repository_url: e.target.value})}
+                    className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  />
                 </div>
               </div>
             </div>

@@ -21,22 +21,22 @@ export default function StudentDetailPage() {
       try {
         const res = await fetch('/api/profiles');
         const data = await res.json();
+        
         if (data.profiles) {
           const match = data.profiles.find((p: any) => 
-            p.id?.toString() === studentId ||
+            p.id?.toString().toLowerCase() === studentId.toLowerCase() ||
             p.name?.toLowerCase().replace(/\s+/g, '-') === studentId.toLowerCase()
           );
           setStudent(match || null);
 
-          // R1.14 & R1.16: Filter projects belonging specifically to this student
           if (data.projects && match) {
+            // Match projects by student ID, contributor IDs, or author name (R1.14, R1.16)
             const filtered = data.projects.filter((proj: any) => {
-              const studentMatchesId = proj.student_id === match.id;
-              const studentMatchesName = proj.author?.toLowerCase() === match.name?.toLowerCase();
-              const studentInContributors = proj.contributors && proj.contributors.some((c: any) => 
-                c.student_id === match.id || c.name?.toLowerCase() === match.name?.toLowerCase()
-              );
-              return studentMatchesId || studentMatchesName || studentInContributors;
+              const matchesStudentId = proj.student_id?.toString().toLowerCase() === match.id?.toString().toLowerCase();
+              const matchesContributorId = proj.contributor_ids && Array.isArray(proj.contributor_ids) && 
+                proj.contributor_ids.some((cid: any) => cid?.toString().toLowerCase() === match.id?.toString().toLowerCase());
+              const matchesAuthorName = proj.author?.toLowerCase() === match.name?.toLowerCase();
+              return matchesStudentId || matchesContributorId || matchesAuthorName;
             });
             setStudentProjects(filtered);
           }
@@ -84,7 +84,7 @@ export default function StudentDetailPage() {
       </header>
 
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Professional Shell (R1.13) */}
+        {/* Professional Shell */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
@@ -140,7 +140,7 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Student-Specific Project Evidence (R1.14, R1.17) */}
+        {/* Student Project Evidence (R1.14) */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Project Evidence for {student.name}</h2>
           
@@ -165,7 +165,7 @@ export default function StudentDetailPage() {
           )}
         </div>
 
-        {/* Contextual Employer Inquiry (R1.18) */}
+        {/* Contextual Inquiry Form */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-2">Initiate Contextual Employer Inquiry</h2>
           <p className="text-sm text-stone-500 mb-6">
