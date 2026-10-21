@@ -1,236 +1,164 @@
 ﻿'use client';
 
-import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { Student } from '@/types';
-import StudentCard from '@/components/StudentCard';
-import StudentCardSkeleton from '@/components/StudentCardSkeleton';
+import { useState, useEffect } from 'react';
 
-function DirectoryContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [students, setStudents] = useState<Student[]>([]);
+export default function TalentIndexPage() {
+  const [profiles, setProfiles] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState('All');
   const [loading, setLoading] = useState(true);
 
-  // Read initial search and filter values directly from the URL
-  const [search, setSearch] = useState(
-    searchParams.get('search') || searchParams.get('skills') || ''
-  );
-  const [statusFilter, setStatusFilter] = useState(
-    searchParams.get('status') || ''
-  );
-  const [availabilityFilter, setAvailabilityFilter] = useState(
-    searchParams.get('availability') || ''
-  );
-
-  // Sync state if URL changes (e.g., browser Back/Forward navigation)
   useEffect(() => {
-    const searchParam =
-      searchParams.get('search') || searchParams.get('skills') || '';
-    const statusParam = searchParams.get('status') || '';
-    const availParam = searchParams.get('availability') || '';
-
-    setSearch(searchParam);
-    setStatusFilter(statusParam);
-    setAvailabilityFilter(availParam);
-  }, [searchParams]);
-
-  // Update the URL query string dynamically when controls change
-  const updateQueryParams = (
-    newSearch: string,
-    newStatus: string,
-    newAvail: string
-  ) => {
-    const params = new URLSearchParams();
-
-    if (newSearch.trim()) params.set('search', newSearch.trim());
-    if (newStatus) params.set('status', newStatus);
-    if (newAvail) params.set('availability', newAvail);
-
-    const queryString = params.toString();
-    const newUrl = queryString ? `/?${queryString}` : '/';
-
-    router.replace(newUrl, { scroll: false });
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    updateQueryParams(value, statusFilter, availabilityFilter);
-  };
-
-  const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    updateQueryParams(search, value, availabilityFilter);
-  };
-
-  const handleAvailabilityChange = (value: string) => {
-    setAvailabilityFilter(value);
-    updateQueryParams(search, statusFilter, value);
-  };
-
-  useEffect(() => {
-    async function fetchStudents() {
-      setLoading(true);
-      const { data, error } = await supabase.from('students').select('*');
-
-      if (error) {
-        console.error('Error fetching students:', error);
-      } else if (data) {
-        // Exclude explicitly unpublished profiles while supporting active schema statuses ('current', 'alumni')
-        const visibleData = data.filter(
-          (student) => student.status !== 'unpublished'
-        );
-        setStudents(visibleData as Student[]);
+    async function fetchProfiles() {
+      try {
+        const res = await fetch('/api/profiles');
+        const data = await res.json();
+        if (data.profiles) setProfiles(data.profiles);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-
-    fetchStudents();
+    fetchProfiles();
   }, []);
 
-  // Multi-term search (AND semantics) matching name, headline, program, skills, projects, certificates, and achievements
-  const filteredStudents = students.filter((student) => {
-    let matchesSearch = true;
+  const allSkills = Array.from(
+    new Set(
+      profiles.flatMap((p: any) => p.skills || [])
+    )
+  );
 
-    if (search.trim()) {
-      const terms = search.trim().toLowerCase().split(/\s+/);
-      matchesSearch = terms.every((term) => {
-        const matchesName = student.name?.toLowerCase().includes(term);
-        const matchesHeadline = student.headline?.toLowerCase().includes(term);
-        const matchesProgram = student.program?.toLowerCase().includes(term);
-        const matchesSkill = student.skills?.some((skill) =>
-          skill.toLowerCase().includes(term)
-        );
+  const filteredProfiles = profiles.filter((p: any) => {
+    const matchesSearch = 
+      p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.project_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.department?.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // Search inside Projects
-        const matchesProject = student.projects?.some(
-          (proj) =>
-            proj.title?.toLowerCase().includes(term) ||
-            proj.description?.toLowerCase().includes(term) ||
-            proj.tech_stack?.some((t) => t.toLowerCase().includes(term))
-        );
+    const matchesSkill = selectedSkill === 'All' || (p.skills && p.skills.includes(selectedSkill));
 
-        // Search inside Certificates
-        const matchesCertificate = student.certificates?.some(
-          (cert) =>
-            cert.name?.toLowerCase().includes(term) ||
-            cert.issuer?.toLowerCase().includes(term)
-        );
-
-        // Search inside Achievements
-        const matchesAchievement = student.achievements?.some(
-          (ach) =>
-            ach.title?.toLowerCase().includes(term) ||
-            ach.description?.toLowerCase().includes(term)
-        );
-
-        return (
-          matchesName ||
-          matchesHeadline ||
-          matchesProgram ||
-          matchesSkill ||
-          matchesProject ||
-          matchesCertificate ||
-          matchesAchievement
-        );
-      });
-    }
-
-    const matchesStatus = statusFilter
-      ? student.status?.toLowerCase().includes(statusFilter.toLowerCase()) ||
-        (statusFilter === 'current' &&
-          student.status?.toLowerCase().includes('student'))
-      : true;
-
-    const matchesAvailability = availabilityFilter
-      ? Array.isArray(student.availability)
-        ? student.availability.some((a) =>
-            a.toLowerCase().includes(availabilityFilter.toLowerCase())
-          )
-        : String(student.availability)
-            .toLowerCase()
-            .includes(availabilityFilter.toLowerCase())
-      : true;
-
-    return matchesSearch && matchesStatus && matchesAvailability;
+    return matchesSearch && matchesSkill;
   });
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-          ImmXrsive Talent Directory
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Discover skilled students and alumni across tech, design, and immersive media.
+    <main className="min-h-screen bg-[#FAF7F2] text-[#2C2825] p-6 md:p-12">
+      <header className="max-w-6xl mx-auto flex justify-between items-center pb-6 mb-12 border-b border-[#E8E2D9]">
+        <div>
+          <span className="text-xs uppercase tracking-wider text-[#C85A32] font-semibold">Chapter 01 / Signal</span>
+          <h1 className="text-2xl font-bold tracking-tight">Immxrsive Talent Index</h1>
+        </div>
+        <a
+          href="/student"
+          className="bg-[#C85A32] text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:bg-[#b04d2a] transition"
+        >
+          Student Login / Create Profile →
+        </a>
+      </header>
+
+      <section className="max-w-3xl mx-auto text-center py-8 mb-12">
+        <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
+          Discover the people building what's next.
+        </h2>
+        <p className="text-stone-600 text-base md:text-lg">
+          Student and alumni talent across immersive technology, software, design, spatial computing, and interactive systems.
         </p>
-      </div>
+      </section>
 
-      {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <input
-          type="text"
-          placeholder="Search by name, skills, projects, certificates..."
-          aria-label="Search candidates by name, headline, skill, program, projects, or certificates"
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+      <section className="max-w-6xl mx-auto mb-8 bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+          <input
+            type="text"
+            placeholder="Search by name, project, or department..."
+            className="w-full md:w-96 p-3 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
 
-        <div className="flex gap-4 w-full md:w-auto">
-          <select
-            value={statusFilter}
-            aria-label="Filter candidates by status"
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="current">Current Student</option>
-            <option value="alumni">Alumni</option>
-          </select>
+          <div className="text-sm text-stone-500 font-medium">
+            Showing <strong>{filteredProfiles.length}</strong> {filteredProfiles.length === 1 ? 'match' : 'matches'}
+          </div>
+        </div>
 
-          <select
-            value={availabilityFilter}
-            aria-label="Filter candidates by availability"
-            onChange={(e) => handleAvailabilityChange(e.target.value)}
-            className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">All Availability</option>
-            <option value="internship">Internship</option>
-            <option value="full-time">Full-time</option>
-            <option value="contract">Contract</option>
-          </select>
-        </div>
-      </div>
+        {allSkills.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-stone-100 items-center">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider mr-2">Evidence Filters:</span>
+            <button
+              onClick={() => setSelectedSkill('All')}
+              className={"px-3 py-1.5 rounded-lg text-xs font-medium transition " + (selectedSkill === 'All' ? 'bg-[#C85A32] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200')}
+            >
+              All Skills
+            </button>
+            {allSkills.map((skill: any) => (
+              <button
+                key={skill}
+                onClick={() => setSelectedSkill(skill)}
+                className={"px-3 py-1.5 rounded-lg text-xs font-medium transition " + (selectedSkill === skill ? 'bg-[#C85A32] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200')}
+              >
+                {skill}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
-      {/* Grid Display */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <StudentCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : filteredStudents.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-500 text-lg">No profile matches found.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
-            <StudentCard key={student.id} student={student} />
-          ))}
-        </div>
-      )}
+      <section className="max-w-6xl mx-auto">
+        {loading ? (
+          <div className="text-center py-20 text-stone-400">Loading talent index...</div>
+        ) : filteredProfiles.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-[#E8E2D9] rounded-2xl text-stone-500">
+            No published talent matches your filter criteria. Be the first to publish at <a href="/student" className="text-[#C85A32] underline font-medium">/student</a>!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProfiles.map((profile: any) => (
+              <div key={profile.id} className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-lg">{profile.full_name}</h3>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-stone-100 text-stone-600 rounded-md">
+                      Verified
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 mb-3">{profile.program} • {profile.department}</p>
+                  
+                  <div className="bg-[#FAF7F2] p-3 rounded-xl mb-3">
+                    <p className="font-medium text-stone-800 text-sm">{profile.project_title}</p>
+                    <p className="text-stone-600 text-xs mt-1 line-clamp-2">{profile.project_description || 'No description provided.'}</p>
+                  </div>
+
+                  {profile.skills && profile.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {profile.skills.map((skill: string, idx: number) => (
+                        <span key={idx} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4 pt-3 border-t border-stone-100 text-xs text-[#C85A32] font-medium">
+                  {profile.deployment_url && (
+                    <a href={profile.deployment_url} target="_blank" rel="noreferrer" className="hover:underline">
+                      Live App ↗
+                    </a>
+                  )}
+                  {profile.repository_url && (
+                    <a href={profile.repository_url} target="_blank" rel="noreferrer" className="text-stone-600 hover:underline">
+                      Repository ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <footer className="max-w-6xl mx-auto mt-20 pt-6 border-t border-[#E8E2D9] flex justify-between items-center text-xs text-stone-500">
+        <span>NOT ImmXrsive Talent Index</span>
+        <span>Independent student-built course project</span>
+      </footer>
     </main>
-  );
-}
-
-export default function DirectoryPage() {
-  return (
-    <Suspense fallback={<div>Loading directory...</div>}>
-      <DirectoryContent />
-    </Suspense>
   );
 }
