@@ -2,24 +2,31 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function StudentPortal() {
-  const [step, setStep] = useState<'login' | 'editor'>('login');
+  const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
-  // Clean Blank Initial Form State
+  // Completely Empty Initial Form State
   const [profile, setProfile] = useState({
-    name: 'Krina Patel',
-    headline: 'Computer Science & IT Student',
+    name: '',
+    headline: '',
     status: 'current',
-    availability: ['internship', 'full-time'],
-    github_url: 'https://github.com/krinapatell',
-    linkedin_url: 'https://linkedin.com/in/krinapatel',
-    deployment_url: 'https://immxrsive-platform-o787.vercel.app',
-    repository_url: 'https://github.com/krinapatell/immxrsive-platform',
-    skills: ['Next.js', 'TypeScript', 'Supabase', 'Java', 'Python'],
-    is_published: true,
+    availability: [] as string[],
+    github_url: '',
+    linkedin_url: '',
+    deployment_url: '',
+    repository_url: '',
+    skills: [] as string[],
+    is_published: false,
   });
 
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -27,19 +34,59 @@ export default function StudentPortal() {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Algoma Email Domain Check (R2.04, R2.05)
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  // Domain Verification & Real Supabase OTP Email Trigger (R2.04, R2.05)
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
 
     const domain = email.split('@')[1];
     if (domain !== 'algomau.ca') {
-      setEmailError('Access Restricted: You must enter an official @algomau.ca student email.');
+      setEmailError('Access Restricted: You must enter an official @algomau.ca student email address.');
       return;
     }
 
-    // Direct access upon valid Algoma domain verification
-    setStep('editor');
+    setOtpLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+
+      if (error) {
+        setEmailError(`Auth Error: ${error.message}`);
+      } else {
+        setStep('otp');
+      }
+    } catch (err: any) {
+      setEmailError('Failed to send verification email. Please check internet connection.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpLoading(true);
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: otp.trim(),
+        type: 'email',
+      });
+
+      if (error) {
+        alert(`Verification Failed: ${error.message}`);
+      } else {
+        setStep('editor');
+      }
+    } catch (err: any) {
+      alert('Invalid code entered.');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const toggleAvailabilityOption = (option: string) => {
@@ -112,7 +159,7 @@ export default function StudentPortal() {
         <h1 className="text-3xl font-extrabold mb-2">Student Self-Service Portal</h1>
         <p className="text-stone-600 text-sm mb-8">Maintain your profile, verify affiliation via Algoma email, attach resumes, and manage directory publishing.</p>
 
-        {/* STEP 1: GitHub Sign-in & Email Verification */}
+        {/* STEP 1: Email Verification */}
         {step === 'login' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">1. Authentication & Affiliation</h2>
@@ -126,7 +173,7 @@ export default function StudentPortal() {
 
             <div className="relative border-t border-[#E8E2D9] my-4">
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-stone-400 font-semibold uppercase">
-                Or Verify Algoma Student ID
+                Or Send OTP to Algoma Mail
               </span>
             </div>
 
@@ -149,14 +196,50 @@ export default function StudentPortal() {
                 </div>
               )}
 
-              <button type="submit" className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition">
-                Verify Affiliation & Access Editor →
+              <button
+                type="submit"
+                disabled={otpLoading}
+                className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
+              >
+                {otpLoading ? 'Sending Email...' : 'Send OTP to My Algoma Email →'}
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 2: Self-Service Profile Editor */}
+        {/* STEP 2: Enter Email OTP */}
+        {step === 'otp' && (
+          <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
+            <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
+            <p className="text-sm text-stone-600">
+              A 6-digit verification code has been emailed to <strong>{email}</strong>. Check your phone or inbox!
+            </p>
+
+            <form onSubmit={handleOtpSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="123456"
+                  className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={otpLoading}
+                className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
+              >
+                {otpLoading ? 'Verifying...' : 'Verify OTP Code →'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* STEP 3: Self-Service Blank Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
@@ -208,7 +291,7 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Full Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Krina Patel"
+                    placeholder="e.g. Full Name"
                     value={profile.name}
                     onChange={e => setProfile({...profile, name: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -248,7 +331,7 @@ export default function StudentPortal() {
                 <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Headline</label>
                 <input
                   type="text"
-                  placeholder="e.g. Computer Science & Spatial Computing Student"
+                  placeholder="e.g. Computer Science & IT Student"
                   value={profile.headline}
                   onChange={e => setProfile({...profile, headline: e.target.value})}
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -268,7 +351,7 @@ export default function StudentPortal() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Add skill..."
+                    placeholder="Add skill (e.g. React, Next.js)..."
                     value={newSkillInput}
                     onChange={e => setNewSkillInput(e.target.value)}
                     className="p-2.5 rounded-xl border border-[#E8E2D9] text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32] flex-1"
