@@ -55,21 +55,25 @@ export default function DirectoryPage() {
       p.program?.toLowerCase().includes(query) ||
       p.skills?.some(s => s.toLowerCase().includes(query));
 
-    // Status filter match
+    // Status filter match (case-insensitive)
+    const pStatus = (p.status || '').toLowerCase();
     const matchesStatus =
-      statusFilter === 'All' || p.status?.toLowerCase() === statusFilter.toLowerCase();
+      statusFilter === 'All' ||
+      (statusFilter === 'current' && (pStatus === 'current' || pStatus === 'current student')) ||
+      (statusFilter === 'alumni' && pStatus === 'alumni') ||
+      pStatus === statusFilter.toLowerCase();
 
-    // Availability filter match
+    // Availability filter match (case-insensitive)
+    const pAvailability = (p.availability || []).map(a => a.toLowerCase());
     const matchesAvailability =
       availabilityFilter.length === 0 ||
-      availabilityFilter.some(a => p.availability?.includes(a));
+      availabilityFilter.some(a => pAvailability.includes(a.toLowerCase()));
 
     return matchesSearch && matchesStatus && matchesAvailability;
   });
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#2C2825] p-6 md:p-12">
-      {/* Header */}
       <header className="max-w-6xl mx-auto flex justify-between items-center pb-6 mb-10 border-b border-[#E8E2D9]">
         <div className="flex items-center gap-3">
           <span className="text-xl font-bold text-[#C85A32]">ImmXrsive</span>
@@ -124,7 +128,7 @@ export default function DirectoryPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-2 border-t border-stone-100">
+          <div className="flex items-center gap-2 pt-2 border-t border-stone-100 flex-wrap">
             <span className="text-xs font-bold uppercase text-stone-500 mr-2">
               Availability (OR):
             </span>
@@ -133,13 +137,13 @@ export default function DirectoryPage() {
                 key={opt}
                 onClick={() => toggleAvailability(opt)}
                 className={
-                  'px-3 py-1 rounded-lg text-xs font-semibold capitalize transition ' +
+                  'px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ' +
                   (availabilityFilter.includes(opt)
                     ? 'bg-[#C85A32] text-white'
                     : 'bg-stone-100 text-stone-600 hover:bg-stone-200')
                 }
               >
-                {opt}
+                {opt} {availabilityFilter.includes(opt) && '✓'}
               </button>
             ))}
           </div>
@@ -165,7 +169,7 @@ export default function DirectoryPage() {
                     <span
                       className={
                         'text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ' +
-                        (p.status === 'alumni'
+                        (p.status?.toLowerCase() === 'alumni'
                           ? 'bg-amber-50 text-amber-800 border border-amber-200'
                           : 'bg-emerald-50 text-emerald-800 border border-emerald-200')
                       }
