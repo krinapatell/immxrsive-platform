@@ -24,7 +24,6 @@ export default function StudentDetailPage() {
         const data = await res.json();
         
         if (data.profiles && data.profiles.length > 0) {
-          // Flexible matching for IDs, Slugs, and Full Names
           const targetSlug = decodedId.toLowerCase().replace(/\s+/g, '-');
           
           let match = data.profiles.find((p: any) => {
@@ -33,14 +32,6 @@ export default function StudentDetailPage() {
             return pId === targetSlug || pNameSlug === targetSlug || p.name?.toLowerCase() === decodedId.toLowerCase();
           });
 
-          // Fallback match if user slug contains part of name
-          if (!match) {
-            match = data.profiles.find((p: any) => 
-              p.name && targetSlug.includes(p.name.toLowerCase().split(' ')[0])
-            );
-          }
-
-          // Dynamic fallback object for user-created profiles if API is rebuilding
           if (!match && targetSlug.includes('krina')) {
             match = {
               id: 'krina-patel',
@@ -58,14 +49,11 @@ export default function StudentDetailPage() {
 
           setStudent(match || null);
 
-          if (data.projects && match) {
-            const filtered = data.projects.filter((proj: any) => {
-              const matchesStudentId = proj.student_id?.toString().toLowerCase() === match.id?.toString().toLowerCase();
-              const matchesAuthorName = proj.author?.toLowerCase().includes(match.name?.toLowerCase()) || match.name?.toLowerCase().includes(proj.author?.toLowerCase());
-              return matchesStudentId || matchesAuthorName;
-            });
-
-            setStudentProjects(filtered.length > 0 ? filtered : data.projects.slice(0, 2));
+          // Fetch unique projects for this specific student key/slug
+          if (data.uniqueProjectMap) {
+            const matchKey = match?.id || targetSlug;
+            const uniqueList = data.uniqueProjectMap[matchKey] || data.uniqueProjectMap[targetSlug] || [];
+            setStudentProjects(uniqueList);
           }
         }
       } catch (err) {
@@ -111,7 +99,7 @@ export default function StudentDetailPage() {
       </header>
 
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Professional Shell (R1.13) */}
+        {/* Professional Shell */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
@@ -168,28 +156,34 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Project Evidence Section (R1.14) */}
+        {/* Unique Project Evidence Section */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Project Evidence for {student.name}</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {studentProjects.map((proj: any, idx: number) => (
-              <div key={proj.id || idx} className="border border-[#E8E2D9] rounded-xl p-5 bg-[#FAF7F2] flex flex-col justify-between">
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1">{proj.title}</h3>
-                  <p className="text-xs text-stone-600 mb-4">{proj.description}</p>
+          {studentProjects.length === 0 ? (
+            <div className="p-6 bg-[#FAF7F2] rounded-xl text-center text-stone-500 text-sm">
+              No specific project evidence uploaded for this student yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {studentProjects.map((proj: any, idx: number) => (
+                <div key={proj.id || idx} className="border border-[#E8E2D9] rounded-xl p-5 bg-[#FAF7F2] flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-stone-900 mb-1">{proj.title}</h3>
+                    <p className="text-xs text-stone-600 mb-4">{proj.description}</p>
+                  </div>
+                  {proj.repository_url && (
+                    <a href={proj.repository_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#C85A32] hover:underline">
+                      View Project GitHub Source ↗
+                    </a>
+                  )}
                 </div>
-                {proj.repository_url && (
-                  <a href={proj.repository_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#C85A32] hover:underline">
-                    View Project GitHub Source ↗
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Employer Contextual Inquiry (R1.18) */}
+        {/* Contextual Employer Inquiry */}
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-2">Initiate Contextual Employer Inquiry</h2>
           <p className="text-sm text-stone-500 mb-6">
