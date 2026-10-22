@@ -7,7 +7,6 @@ export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [displayCode, setDisplayCode] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -49,11 +48,10 @@ export default function StudentPortal() {
       });
       const data = await res.json();
 
-      if (data.challengeCode) {
-        setDisplayCode(data.challengeCode);
+      if (data.dispatched) {
         setStep('otp');
       } else {
-        setEmailError('Failed to generate verification code.');
+        setEmailError('Failed to dispatch verification email.');
       }
     } catch (err) {
       setEmailError('Network error connecting to verification service.');
@@ -198,25 +196,24 @@ export default function StudentPortal() {
                 disabled={loading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Generate Verification Code →'}
+                {loading ? 'Sending Email...' : 'Send Verification Code to Email →'}
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 2: Enter Code */}
+        {/* STEP 2: Enter Code from Email */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
             
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs space-y-1">
-              <p className="font-bold uppercase tracking-wider">Verification Challenge Dispatched to {email}:</p>
-              <p>Your secure verification code is: <span className="font-mono font-bold text-base text-[#C85A32]">{displayCode}</span></p>
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm">
+              ✓ Verification code has been emailed to <strong>{email}</strong>. Check your inbox to retrieve your code.
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
                 <input
                   type="text"
                   required
