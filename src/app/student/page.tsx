@@ -53,7 +53,7 @@ export default function StudentPortal() {
         setDisplayCode(data.challengeCode);
         setStep('otp');
       } else {
-        setEmailError('Failed to generate verification challenge.');
+        setEmailError('Failed to generate verification code.');
       }
     } catch (err) {
       setEmailError('Network error connecting to verification service.');
@@ -198,7 +198,7 @@ export default function StudentPortal() {
                 disabled={loading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Send Verification Code →'}
+                {loading ? 'Processing...' : 'Generate Verification Code →'}
               </button>
             </form>
           </div>
@@ -210,8 +210,8 @@ export default function StudentPortal() {
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
             
             <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-xs space-y-1">
-              <p className="font-bold uppercase tracking-wider">Simulated Secure Email Dispatch for {email}:</p>
-              <p>Your verification code is: <span className="font-mono font-bold text-base text-[#C85A32]">{displayCode}</span></p>
+              <p className="font-bold uppercase tracking-wider">Verification Challenge Dispatched to {email}:</p>
+              <p>Your secure verification code is: <span className="font-mono font-bold text-base text-[#C85A32]">{displayCode}</span></p>
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
