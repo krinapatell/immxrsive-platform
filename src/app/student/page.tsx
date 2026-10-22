@@ -59,7 +59,7 @@ export default function StudentPortal() {
         setStep('otp');
       }
     } catch (err: any) {
-      setEmailError('Failed to send email. Please check your connection.');
+      setEmailError('Failed to send email.');
     } finally {
       setLoading(false);
     }
@@ -207,18 +207,18 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 2: Enter Code from Email */}
+        {/* STEP 2: Enter Code From Inbox */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
             
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm">
-              ✓ A verification code has been successfully sent to <strong>{email}</strong>. Please check your email inbox!
+              ✓ An OTP verification code has been sent directly to <strong>{email}</strong>. Check your inbox to get the code.
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code From Email</label>
                 <input
                   type="text"
                   required
@@ -394,7 +394,7 @@ export default function StudentPortal() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-stone-600 mmb-1">Deployment URL</label>
+                  <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Deployment URL</label>
                   <input
                     type="url"
                     autoComplete="off"
