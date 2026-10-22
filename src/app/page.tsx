@@ -46,7 +46,6 @@ export default function DirectoryPage() {
   };
 
   const filteredProfiles = profiles.filter(p => {
-    // Search match
     const query = search.toLowerCase();
     const matchesSearch =
       !query ||
@@ -55,7 +54,6 @@ export default function DirectoryPage() {
       p.program?.toLowerCase().includes(query) ||
       p.skills?.some(s => s.toLowerCase().includes(query));
 
-    // Status filter match (case-insensitive)
     const pStatus = (p.status || '').toLowerCase();
     const matchesStatus =
       statusFilter === 'All' ||
@@ -63,7 +61,6 @@ export default function DirectoryPage() {
       (statusFilter === 'alumni' && pStatus === 'alumni') ||
       pStatus === statusFilter.toLowerCase();
 
-    // Availability filter match (case-insensitive)
     const pAvailability = (p.availability || []).map(a => a.toLowerCase());
     const matchesAvailability =
       availabilityFilter.length === 0 ||
@@ -95,7 +92,7 @@ export default function DirectoryPage() {
             ImmXrsive Talent Directory
           </h1>
           <p className="text-stone-600 text-sm max-w-xl mx-auto">
-            Discover skilled students and alumni across tech, design, spatial computing, and interactive systems.
+            Discover skilled students and alumni across tech, design, spatial computing, and immersive media.
           </p>
         </div>
 
@@ -205,28 +202,12 @@ export default function DirectoryPage() {
                     ))}
                   </div>
 
-                  <div className="flex gap-3 font-semibold text-stone-600">
-                    {p.repository_url && (
-                      <a
-                        href={p.repository_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-[#C85A32] transition"
-                      >
-                        Repo ↗
-                      </a>
-                    )}
-                    {p.deployment_url && (
-                      <a
-                        href={p.deployment_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-[#C85A32] transition"
-                      >
-                        Demo ↗
-                      </a>
-                    )}
-                  </div>
+                  <Link
+                    href={`/student/${p.id || p.name?.toLowerCase().replace(/\s+/g, '-')}`}
+                    className="bg-[#C85A32] text-white font-semibold px-4 py-2 rounded-xl text-xs hover:bg-[#b04d2a] transition"
+                  >
+                    View Profile →
+                  </Link>
                 </div>
               </div>
             ))}
