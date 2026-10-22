@@ -3,229 +3,229 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function TalentIndexPage() {
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+interface Profile {
+  id: string;
+  name: string;
+  headline: string;
+  status: string;
+  program: string;
+  department: string;
+  availability: string[];
+  skills: string[];
+  deployment_url?: string;
+  repository_url?: string;
+  is_published?: boolean;
+}
+
+export default function DirectoryPage() {
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string[]>([]);
 
   useEffect(() => {
-    async function fetchProfiles() {
+    async function loadData() {
       try {
         const res = await fetch('/api/profiles');
         const data = await res.json();
-        if (data.profiles) setProfiles(data.profiles);
+        setProfiles(data.profiles || []);
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load profiles:', err);
       } finally {
         setLoading(false);
       }
     }
-    fetchProfiles();
+    loadData();
   }, []);
 
-  const allSkills = Array.from(
-    new Set(profiles.flatMap((p: any) => p.skills || []))
-  );
-
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+  const toggleAvailability = (opt: string) => {
+    setAvailabilityFilter(prev =>
+      prev.includes(opt) ? prev.filter(a => a !== opt) : [...prev, opt]
     );
   };
 
-  const toggleAvailability = (avail: string) => {
-    setSelectedAvailability(prev =>
-      prev.includes(avail) ? prev.filter(a => a !== avail) : [...prev, avail]
-    );
-  };
+  const filteredProfiles = profiles.filter(p => {
+    // Search match
+    const query = search.toLowerCase();
+    const matchesSearch =
+      !query ||
+      p.name?.toLowerCase().includes(query) ||
+      p.headline?.toLowerCase().includes(query) ||
+      p.program?.toLowerCase().includes(query) ||
+      p.skills?.some(s => s.toLowerCase().includes(query));
 
-  const filteredProfiles = profiles.filter((p: any) => {
-    // Status Filter (R1.08)
-    if (selectedStatus !== 'All') {
-      if (p.status?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
-    }
+    // Status filter match
+    const matchesStatus =
+      statusFilter === 'All' || p.status?.toLowerCase() === statusFilter.toLowerCase();
 
-    // Case-insensitive Search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const nameMatch = p.name?.toLowerCase().includes(q);
-      const headlineMatch = p.headline?.toLowerCase().includes(q);
-      const programMatch = p.program?.toLowerCase().includes(q);
-      const skillMatch = p.skills && p.skills.some((s: string) => s.toLowerCase().includes(q));
-      if (!nameMatch && !headlineMatch && !programMatch && !skillMatch) return false;
-    }
+    // Availability filter match
+    const matchesAvailability =
+      availabilityFilter.length === 0 ||
+      availabilityFilter.some(a => p.availability?.includes(a));
 
-    // Skills AND logic (R1.06)
-    if (selectedSkills.length > 0) {
-      const hasAllSkills = selectedSkills.every(s => p.skills && p.skills.includes(s));
-      if (!hasAllSkills) return false;
-    }
-
-    // Availability OR logic (R1.07)
-    if (selectedAvailability.length > 0) {
-      const hasAvailability = p.availability && p.availability.some((a: string) => selectedAvailability.includes(a));
-      if (!hasAvailability) return false;
-    }
-
-    return true;
+    return matchesSearch && matchesStatus && matchesAvailability;
   });
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#2C2825] p-6 md:p-12">
+      {/* Header */}
       <header className="max-w-6xl mx-auto flex justify-between items-center pb-6 mb-10 border-b border-[#E8E2D9]">
         <div className="flex items-center gap-3">
           <span className="text-xl font-bold text-[#C85A32]">ImmXrsive</span>
-          <span className="bg-[#C85A32]/10 text-[#C85A32] text-xs font-semibold px-2.5 py-0.5 rounded-full">
+          <span className="text-xs bg-[#C85A32]/10 text-[#C85A32] font-semibold px-2.5 py-1 rounded-full">
             Talent Platform
           </span>
         </div>
         <Link
           href="/student"
-          className="bg-[#C85A32] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#b04d2a] transition shadow-sm"
+          className="bg-[#C85A32] text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-[#b04d2a] transition"
         >
           Student Portal / Login →
         </Link>
       </header>
 
       <div className="max-w-6xl mx-auto">
-        <div className="text-center py-4 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-extrabold text-[#2C2825] mb-3">
             ImmXrsive Talent Directory
           </h1>
-          <p className="text-stone-600 text-sm md:text-base">
+          <p className="text-stone-600 text-sm max-w-xl mx-auto">
             Discover skilled students and alumni across tech, design, spatial computing, and interactive systems.
           </p>
         </div>
 
-        {/* Search & Filter Box */}
-        <section className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm mb-8 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+        {/* Search & Filter Bar */}
+        <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm mb-8 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <input
               type="text"
-              placeholder="Search by name, headline, or program..."
-              className="w-full md:w-80 p-3 rounded-xl border border-[#E8E2D9] bg-[#FAF7F2]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by name, headline, or skill..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full md:w-96 p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
             />
 
-            {/* Status Dropdown Filter (R1.08) */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <label className="text-xs font-bold text-stone-500 uppercase">Status:</label>
+            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+              <label className="text-xs font-bold uppercase text-stone-500">Status:</label>
               <select
-                value={selectedStatus}
-                onChange={e => setSelectedStatus(e.target.value)}
-                className="p-3 rounded-xl border border-[#E8E2D9] bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C85A32]"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="p-3 rounded-xl border border-[#E8E2D9] text-sm bg-white font-medium focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
               >
                 <option value="All">All Statuses</option>
                 <option value="current">Current Student</option>
                 <option value="alumni">Alumni</option>
               </select>
 
-              <div className="text-sm text-stone-500 font-medium ml-2">
-                <strong>{filteredProfiles.length}</strong> matches
-              </div>
+              <span className="text-xs font-bold text-stone-500">
+                {filteredProfiles.length} matches
+              </span>
             </div>
           </div>
 
-          {/* Availability Filters (R1.07) */}
-          <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mr-2">Availability (OR):</span>
-            {['internship', 'full-time', 'contract'].map(avail => (
+          <div className="flex items-center gap-2 pt-2 border-t border-stone-100">
+            <span className="text-xs font-bold uppercase text-stone-500 mr-2">
+              Availability (OR):
+            </span>
+            {['internship', 'full-time', 'contract'].map(opt => (
               <button
-                key={avail}
-                onClick={() => toggleAvailability(avail)}
-                className={"px-3 py-1 rounded-lg text-xs font-semibold capitalize transition " + (selectedAvailability.includes(avail) ? 'bg-[#C85A32] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200')}
+                key={opt}
+                onClick={() => toggleAvailability(opt)}
+                className={
+                  'px-3 py-1 rounded-lg text-xs font-semibold capitalize transition ' +
+                  (availabilityFilter.includes(opt)
+                    ? 'bg-[#C85A32] text-white'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200')
+                }
               >
-                {avail}
+                {opt}
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Standardized Skill Filters (R1.05) */}
-          {allSkills.length > 0 && (
-            <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider mr-2">Skills (AND):</span>
-              {allSkills.map((skill: any) => (
-                <button
-                  key={skill}
-                  onClick={() => toggleSkill(skill)}
-                  className={"px-3 py-1 rounded-lg text-xs font-semibold transition " + (selectedSkills.includes(skill) ? 'bg-[#C85A32] text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200')}
-                >
-                  {skill} {selectedSkills.includes(skill) && '✓'}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Directory Grid */}
+        {/* Profile Cards */}
         {loading ? (
-          <div className="text-center py-20 text-stone-400 font-medium">Loading candidate profiles...</div>
+          <div className="text-center py-12 text-stone-500 text-sm">Loading candidate profiles...</div>
         ) : filteredProfiles.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-[#E8E2D9] rounded-2xl text-stone-500">
+          <div className="bg-white border border-[#E8E2D9] rounded-2xl p-12 text-center text-stone-500 text-sm">
             No talent matches selected filter criteria.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProfiles.map((student: any) => {
-              const studentSlug = student.id || student.name.toLowerCase().replace(/\s+/g, '-');
-              return (
-                <div
-                  key={student.id || student.name}
-                  className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition"
-                >
-                  <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <h2 className="text-xl font-bold text-stone-900">{student.name}</h2>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-stone-100 text-stone-600 rounded-md">
-                        {student.status || 'current'}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-stone-500 mb-2">
-                      {student.program || 'Computer Science'} • {student.department || 'CS & IT'}
-                    </p>
-
-                    {/* Availability Badges */}
-                    {student.availability && student.availability.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {student.availability.map((avail: string, idx: number) => (
-                          <span key={idx} className="text-[10px] bg-[#C85A32]/10 text-[#C85A32] font-bold uppercase px-2 py-0.5 rounded-md">
-                            {avail}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="bg-[#FAF7F2] p-3 rounded-xl mb-4">
-                      <p className="text-sm font-medium text-stone-800 line-clamp-2">
-                        {student.headline || 'Talent Profile'}
-                      </p>
-                    </div>
-
-                    {student.skills && student.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-6">
-                        {student.skills.map((skill: string, idx: number) => (
-                          <span key={idx} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md font-medium">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredProfiles.map(p => (
+              <div
+                key={p.id}
+                className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:border-[#C85A32]/40 transition"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-xl font-bold text-stone-900">{p.name}</h2>
+                    <span
+                      className={
+                        'text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ' +
+                        (p.status === 'alumni'
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200')
+                      }
+                    >
+                      {p.status}
+                    </span>
                   </div>
 
-                  <Link
-                    href={`/student/${studentSlug}`}
-                    className="w-full text-center bg-[#C85A32] hover:bg-[#b04d2a] text-white text-xs font-bold py-2.5 rounded-xl transition block shadow-sm"
-                  >
-                    View Full Profile & Projects →
-                  </Link>
+                  <p className="text-sm font-semibold text-[#C85A32] mb-1">{p.headline}</p>
+                  <p className="text-xs text-stone-500 mb-4">{p.program} • {p.department}</p>
+
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {p.skills?.map(sk => (
+                      <span
+                        key={sk}
+                        className="bg-stone-100 text-stone-700 text-xs px-2.5 py-1 rounded-md font-medium"
+                      >
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              );
-            })}
+
+                <div className="pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
+                  <div className="flex gap-2">
+                    {p.availability?.map(a => (
+                      <span
+                        key={a}
+                        className="bg-[#C85A32]/10 text-[#C85A32] font-bold px-2 py-0.5 rounded capitalize text-[10px]"
+                      >
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3 font-semibold text-stone-600">
+                    {p.repository_url && (
+                      <a
+                        href={p.repository_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-[#C85A32] transition"
+                      >
+                        Repo ↗
+                      </a>
+                    )}
+                    {p.deployment_url && (
+                      <a
+                        href={p.deployment_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-[#C85A32] transition"
+                      >
+                        Demo ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
