@@ -15,7 +15,7 @@ export default function StudentPortal() {
   const [emailError, setEmailError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // Completely Empty Initial Form State
+  // Strictly Empty State for New Profiles
   const [profile, setProfile] = useState({
     name: '',
     headline: '',
@@ -34,7 +34,7 @@ export default function StudentPortal() {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Domain Verification & Real Supabase OTP Email Trigger (R2.04, R2.05)
+  // Domain Verification & Supabase OTP Trigger
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
@@ -177,12 +177,13 @@ export default function StudentPortal() {
               </span>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Algoma Student Email</label>
                 <input
                   type="email"
                   required
+                  autoComplete="off"
                   placeholder="username@algomau.ca"
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={email}
@@ -215,12 +216,13 @@ export default function StudentPortal() {
               A 6-digit verification code has been emailed to <strong>{email}</strong>. Check your phone or inbox!
             </p>
 
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
+            <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
                 <input
                   type="text"
                   required
+                  autoComplete="off"
                   placeholder="123456"
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
@@ -239,7 +241,7 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 3: Self-Service Blank Profile Editor */}
+        {/* STEP 3: Blank Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
@@ -248,7 +250,7 @@ export default function StudentPortal() {
               </div>
             )}
 
-            {/* Resume Upload & Parsing */}
+            {/* Resume Upload */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm">
               <h2 className="font-bold text-stone-900 mb-1">Attach Resume (PDF)</h2>
               <p className="text-xs text-stone-500 mb-4">Upload fixture or custom resume to extract skills for candidate review.</p>
@@ -291,7 +293,8 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Full Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Full Name"
+                    autoComplete="off"
+                    placeholder="Enter full name"
                     value={profile.name}
                     onChange={e => setProfile({...profile, name: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -331,7 +334,8 @@ export default function StudentPortal() {
                 <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Headline</label>
                 <input
                   type="text"
-                  placeholder="e.g. Computer Science & IT Student"
+                  autoComplete="off"
+                  placeholder="Enter headline (e.g. CS & IT Student)"
                   value={profile.headline}
                   onChange={e => setProfile({...profile, headline: e.target.value})}
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -351,7 +355,8 @@ export default function StudentPortal() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Add skill (e.g. React, Next.js)..."
+                    autoComplete="off"
+                    placeholder="Add skill..."
                     value={newSkillInput}
                     onChange={e => setNewSkillInput(e.target.value)}
                     className="p-2.5 rounded-xl border border-[#E8E2D9] text-sm focus:outline-none focus:ring-2 focus:ring-[#C85A32] flex-1"
@@ -367,7 +372,8 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">GitHub Profile Link</label>
                   <input
                     type="url"
-                    placeholder="https://github.com/your-username"
+                    autoComplete="off"
+                    placeholder="https://github.com/username"
                     value={profile.github_url}
                     onChange={e => setProfile({...profile, github_url: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -377,7 +383,8 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">LinkedIn Profile Link</label>
                   <input
                     type="url"
-                    placeholder="https://linkedin.com/in/your-username"
+                    autoComplete="off"
+                    placeholder="https://linkedin.com/in/username"
                     value={profile.linkedin_url}
                     onChange={e => setProfile({...profile, linkedin_url: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
@@ -390,6 +397,7 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Deployment URL</label>
                   <input
                     type="url"
+                    autoComplete="off"
                     placeholder="https://your-portfolio.vercel.app"
                     value={profile.deployment_url}
                     onChange={e => setProfile({...profile, deployment_url: e.target.value})}
@@ -400,7 +408,8 @@ export default function StudentPortal() {
                   <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Repository URL</label>
                   <input
                     type="url"
-                    placeholder="https://github.com/your-username/your-repo"
+                    autoComplete="off"
+                    placeholder="https://github.com/username/repo"
                     value={profile.repository_url}
                     onChange={e => setProfile({...profile, repository_url: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
