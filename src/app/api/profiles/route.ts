@@ -5,6 +5,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// In-Memory store for active session OTP codes
+const activeOtps: Record<string, string> = {};
+
 // Distinct project fixtures assigned uniquely per student
 const studentUniqueProjects: Record<string, any[]> = {
   'S01': [
@@ -98,18 +101,44 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
+    // Check if this is an OTP request
+    if (body.action === 'send_otp') {
+      const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+      activeOtps[body.email.toLowerCase()] = generatedCode;
+
+      // Attempt to send email via Supabase Auth
+      await supabase.auth.signInWithOtp({ email: body.email });
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'OTP generated',
+        otpCode: generatedCode 
+      });
+    }
+
+    // Check if this is an OTP verification request
+    if (body.action === 'verify_otp') {
+      const savedOtp = activeOtps[body.email.toLowerCase()];
+      if (savedOtp && savedOtp === body.otp?.trim()) {
+        delete activeOtps[body.email.toLowerCase()];
+        return NextResponse.json({ success: true, verified: true });
+      }
+      return NextResponse.json({ success: false, message: 'Invalid OTP code' }, { status: 400 });
+    }
+
+    // Standard profile upsert
     const newProfile = {
       id: body.id || `S${Date.now()}`,
-      name: body.name || 'Krina Patel',
+      name: body.name || 'Algoma Student',
       headline: body.headline || 'Computer Science & IT Student',
       status: body.is_published ? (body.status || 'current') : 'private',
       program: 'Computer Science',
       department: 'School of Computer Science & Technology',
       availability: body.availability || ['internship'],
-      skills: body.skills || ['Next.js', 'TypeScript', 'Supabase', 'Java'],
-      deployment_url: body.deployment_url || 'https://immxrsive-platform-o787.vercel.app',
-      repository_url: body.repository_url || 'https://github.com/krinapatell/immxrsive-platform',
+      skills: body.skills || [],
+      deployment_url: body.deployment_url || '',
+      repository_url: body.repository_url || '',
       profile_status: body.is_published ? 'published' : 'draft',
     };
 

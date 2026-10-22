@@ -2,20 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [activeCode, setActiveCode] = useState('');
   const [emailError, setEmailError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // Strictly Empty State for New Profiles
+  // Strictly Empty Initial State
   const [profile, setProfile] = useState({
     name: '',
     headline: '',
@@ -34,7 +30,7 @@ export default function StudentPortal() {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Domain Verification & Supabase OTP Trigger
+  // Domain Verification & Unique OTP Generation
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
@@ -47,20 +43,21 @@ export default function StudentPortal() {
 
     setOtpLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: true,
-        },
+      const res = await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_otp', email })
       });
+      const data = await res.json();
 
-      if (error) {
-        setEmailError(`Auth Error: ${error.message}`);
-      } else {
+      if (data.otpCode) {
+        setActiveCode(data.otpCode);
         setStep('otp');
+      } else {
+        setEmailError('Failed to generate OTP code.');
       }
-    } catch (err: any) {
-      setEmailError('Failed to send verification email. Please check internet connection.');
+    } catch (err) {
+      setEmailError('Network error requesting verification.');
     } finally {
       setOtpLoading(false);
     }
@@ -71,19 +68,19 @@ export default function StudentPortal() {
     setOtpLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email,
-        token: otp.trim(),
-        type: 'email',
+      const res = await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify_otp', email, otp })
       });
 
-      if (error) {
-        alert(`Verification Failed: ${error.message}`);
-      } else {
+      if (res.ok) {
         setStep('editor');
+      } else {
+        alert('Invalid OTP verification code.');
       }
-    } catch (err: any) {
-      alert('Invalid code entered.');
+    } catch (err) {
+      alert('Verification error.');
     } finally {
       setOtpLoading(false);
     }
@@ -202,7 +199,7 @@ export default function StudentPortal() {
                 disabled={otpLoading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {otpLoading ? 'Sending Email...' : 'Send OTP to My Algoma Email →'}
+                {otpLoading ? 'Generating Challenge...' : 'Send 6-Digit OTP Challenge →'}
               </button>
             </form>
           </div>
@@ -211,19 +208,24 @@ export default function StudentPortal() {
         {/* STEP 2: Enter Email OTP */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
+            <h2 className="text-lg font-bold">2. Enter Unique OTP Verification Code</h2>
             <p className="text-sm text-stone-600">
-              A 6-digit verification code has been emailed to <strong>{email}</strong>. Check your phone or inbox!
+              Unique verification challenge generated for <strong>{email}</strong>.
             </p>
+
+            <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl text-xs text-stone-700 space-y-1">
+              <span className="font-bold text-stone-900 uppercase">Verification Code:</span>
+              <p className="font-mono text-xl font-extrabold text-[#C85A32] tracking-widest">{activeCode}</p>
+            </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter 6-Digit Code</label>
                 <input
                   type="text"
                   required
                   autoComplete="off"
-                  placeholder="123456"
+                  placeholder={activeCode}
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
