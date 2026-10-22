@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
@@ -41,20 +46,20 @@ export default function StudentPortal() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send_otp', email })
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true,
+        },
       });
-      const data = await res.json();
 
-      if (data.dispatched) {
-        setStep('otp');
+      if (error) {
+        setEmailError(`Auth Error: ${error.message}`);
       } else {
-        setEmailError('Failed to dispatch verification email.');
+        setStep('otp');
       }
-    } catch (err) {
-      setEmailError('Network error connecting to verification service.');
+    } catch (err: any) {
+      setEmailError('Failed to send email. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -65,19 +70,19 @@ export default function StudentPortal() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify_otp', email, otp })
+      const { error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: otp.trim(),
+        type: 'email',
       });
 
-      if (res.ok) {
-        setStep('editor');
+      if (error) {
+        alert(`Verification Failed: ${error.message}`);
       } else {
-        alert('Invalid verification code entered.');
+        setStep('editor');
       }
-    } catch (err) {
-      alert('Verification error.');
+    } catch (err: any) {
+      alert('Invalid code entered.');
     } finally {
       setLoading(false);
     }
@@ -196,7 +201,7 @@ export default function StudentPortal() {
                 disabled={loading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {loading ? 'Sending Email...' : 'Send Verification Code to Email →'}
+                {loading ? 'Sending Email...' : 'Send OTP Code to Email Inbox →'}
               </button>
             </form>
           </div>
@@ -208,7 +213,7 @@ export default function StudentPortal() {
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
             
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm">
-              ✓ Verification code has been emailed to <strong>{email}</strong>. Check your inbox to retrieve your code.
+              ✓ A verification code has been successfully sent to <strong>{email}</strong>. Please check your email inbox!
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
@@ -218,7 +223,7 @@ export default function StudentPortal() {
                   type="text"
                   required
                   autoComplete="off"
-                  placeholder="Enter 6-digit code..."
+                  placeholder="Enter code from email..."
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
@@ -389,7 +394,7 @@ export default function StudentPortal() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Deployment URL</label>
+                  <label className="block text-xs font-bold uppercase text-stone-600 mmb-1">Deployment URL</label>
                   <input
                     type="url"
                     autoComplete="off"
