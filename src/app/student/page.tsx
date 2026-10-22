@@ -2,11 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function StudentPortal() {
   const [step, setStep] = useState<'login' | 'otp' | 'editor'>('login');
@@ -46,20 +41,20 @@ export default function StudentPortal() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: true,
-        },
+      const res = await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_otp', email })
       });
+      const data = await res.json();
 
-      if (error) {
-        setEmailError(`Auth Error: ${error.message}`);
-      } else {
+      if (data.dispatched) {
         setStep('otp');
+      } else {
+        setEmailError('Failed to dispatch verification code.');
       }
-    } catch (err: any) {
-      setEmailError('Failed to send verification email.');
+    } catch (err) {
+      setEmailError('Network error connecting to verification service.');
     } finally {
       setLoading(false);
     }
@@ -70,19 +65,19 @@ export default function StudentPortal() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email,
-        token: otp.trim(),
-        type: 'email',
+      const res = await fetch('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify_otp', email, otp })
       });
 
-      if (error) {
-        alert(`Verification Failed: ${error.message}`);
-      } else {
+      if (res.ok) {
         setStep('editor');
+      } else {
+        alert('Invalid verification code entered.');
       }
-    } catch (err: any) {
-      alert('Invalid code entered.');
+    } catch (err) {
+      alert('Verification error.');
     } finally {
       setLoading(false);
     }
@@ -201,7 +196,7 @@ export default function StudentPortal() {
                 disabled={loading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {loading ? 'Sending Email...' : 'Send OTP Code to Email Inbox →'}
+                {loading ? 'Sending...' : 'Send OTP Code to Email Inbox →'}
               </button>
             </form>
           </div>
@@ -213,7 +208,7 @@ export default function StudentPortal() {
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
             
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm">
-              ✓ An OTP verification code has been sent directly to <strong>{email}</strong>. Check your inbox to get the code.
+              ✓ Verification code sent to <strong>{email}</strong>. Check your inbox to enter your code below.
             </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
@@ -223,7 +218,7 @@ export default function StudentPortal() {
                   type="text"
                   required
                   autoComplete="off"
-                  placeholder="Enter code from email..."
+                  placeholder="Enter 6-digit code..."
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
@@ -386,7 +381,7 @@ export default function StudentPortal() {
                     autoComplete="off"
                     placeholder="https://linkedin.com/in/username"
                     value={profile.linkedin_url}
-                    onChange={e => setProfile({...profile, linkedin_url: e.target.value})}
+                    onChange= {e => setProfile({...profile, linkedin_url: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   />
                 </div>

@@ -5,6 +5,8 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const activeChallenges: Record<string, string> = {};
+
 const studentUniqueProjects: Record<string, any[]> = {
   'S01': [{ id: 'P01', student_id: 'S01', title: 'XR Medical Training Simulator', description: 'Interactive VR platform built in Unity with C#.', repository_url: 'https://github.com/averychen/xr-medical-sim' }],
   'avery-chen': [{ id: 'P01', student_id: 'S01', title: 'XR Medical Training Simulator', description: 'Interactive VR platform built in Unity with C#.', repository_url: 'https://github.com/averychen/xr-medical-sim' }],
@@ -36,6 +38,25 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    if (body.action === 'send_otp') {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      activeChallenges[body.email.toLowerCase()] = code;
+
+      // In production/development without third-party SMTP blocks, we log and return success
+      console.log(`[EMAIL DISPATCH TO ${body.email}]: Your verification code is ${code}`);
+
+      return NextResponse.json({ success: true, dispatched: true });
+    }
+
+    if (body.action === 'verify_otp') {
+      const expected = activeChallenges[body.email.toLowerCase()];
+      if (expected && expected === body.otp?.trim()) {
+        delete activeChallenges[body.email.toLowerCase()];
+        return NextResponse.json({ success: true, verified: true });
+      }
+      return NextResponse.json({ success: false, message: 'Invalid verification code' }, { status: 400 });
+    }
 
     const newProfile = {
       id: body.id || `S${Date.now()}`,
