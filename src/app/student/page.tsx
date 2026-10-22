@@ -59,7 +59,7 @@ export default function StudentPortal() {
         setStep('otp');
       }
     } catch (err: any) {
-      setEmailError('Failed to send email.');
+      setEmailError('Failed to send verification email.');
     } finally {
       setLoading(false);
     }
