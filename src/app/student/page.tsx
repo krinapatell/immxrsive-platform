@@ -15,7 +15,7 @@ export default function StudentPortal() {
   const [emailError, setEmailError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // Strictly Empty Form State for New Candidate Profiles
+  // Clean Blank Form State for Candidate Profile Creation
   const [profile, setProfile] = useState({
     name: '',
     headline: '',
@@ -34,7 +34,7 @@ export default function StudentPortal() {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Algoma Email Domain Enforcement & Direct 6-Digit OTP Email Dispatch
+  // Domain Verification & Direct Supabase Numeric Email OTP Trigger (R2.04)
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
@@ -51,7 +51,6 @@ export default function StudentPortal() {
         email: email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: undefined
         },
       });
 
@@ -61,18 +60,18 @@ export default function StudentPortal() {
         setStep('otp');
       }
     } catch (err: any) {
-      setEmailError('Failed to send verification email. Please try again.');
+      setEmailError('Failed to dispatch OTP email. Please try again.');
     } finally {
       setOtpLoading(false);
     }
   };
 
+  // Verify 6-Digit Email OTP Token Input
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setOtpLoading(true);
 
     try {
-      // Verify the 6-digit token received in email
       const { error } = await supabase.auth.verifyOtp({
         email: email,
         token: otp.trim(),
@@ -80,12 +79,7 @@ export default function StudentPortal() {
       });
 
       if (error) {
-        // Fallback check if user enters verification token or local challenge
-        if (otp.trim().length >= 6) {
-          setStep('editor');
-        } else {
-          alert(`Verification Failed: ${error.message}`);
-        }
+        alert(`Verification Failed: ${error.message}`);
       } else {
         setStep('editor');
       }
@@ -166,7 +160,7 @@ export default function StudentPortal() {
         <h1 className="text-3xl font-extrabold mb-2">Student Self-Service Portal</h1>
         <p className="text-stone-600 text-sm mb-8">Maintain your profile, verify affiliation via Algoma email, attach resumes, and manage directory publishing.</p>
 
-        {/* STEP 1: Email Verification */}
+        {/* STEP 1: Algoma Email Input */}
         {step === 'login' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">1. Authentication & Affiliation</h2>
@@ -180,7 +174,7 @@ export default function StudentPortal() {
 
             <div className="relative border-t border-[#E8E2D9] my-4">
               <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-stone-400 font-semibold uppercase">
-                Or Send OTP to Algoma Mail
+                Or Send OTP Code
               </span>
             </div>
 
@@ -209,28 +203,28 @@ export default function StudentPortal() {
                 disabled={otpLoading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {otpLoading ? 'Sending OTP Email...' : 'Send 6-Digit OTP Code to Algoma Mail →'}
+                {otpLoading ? 'Sending Email...' : 'Send 6-Digit OTP Code to Email →'}
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 2: Enter Email OTP */}
+        {/* STEP 2: Enter Verification Code */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
-            <p className="text-sm text-stone-600">
-              An OTP verification code was sent to <strong>{email}</strong>. Check your inbox or phone for your email code.
-            </p>
+            <h2 className="text-lg font-bold">2. Enter OTP Verification Code</h2>
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm">
+              ✓ A 6-digit numeric verification code has been emailed to <strong>{email}</strong>. Check your phone or inbox!
+            </div>
 
             <form onSubmit={handleOtpSubmit} className="space-y-4" autoComplete="off">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">Enter 6-Digit OTP Code</label>
+                <label className="block text-xs font-bold uppercase text-stone-600 mb-1">6-Digit Code from Email</label>
                 <input
                   type="text"
                   required
                   autoComplete="off"
-                  placeholder="123456"
+                  placeholder="e.g. 123456"
                   className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   value={otp}
                   onChange={e => setOtp(e.target.value)}
@@ -242,13 +236,13 @@ export default function StudentPortal() {
                 disabled={otpLoading}
                 className="w-full bg-[#C85A32] text-white font-semibold py-3 rounded-xl hover:bg-[#b04d2a] transition disabled:opacity-50"
               >
-                {otpLoading ? 'Verifying Code...' : 'Verify OTP Code & Access Editor →'}
+                {otpLoading ? 'Verifying...' : 'Verify Code & Access Profile Editor →'}
               </button>
             </form>
           </div>
         )}
 
-        {/* STEP 3: Self-Service Profile Editor */}
+        {/* STEP 3: Blank Self-Service Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
