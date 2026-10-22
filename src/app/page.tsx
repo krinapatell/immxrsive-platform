@@ -29,7 +29,9 @@ export default function DirectoryPage() {
       try {
         const res = await fetch('/api/profiles');
         const data = await res.json();
-        setProfiles(data.profiles || []);
+        // Only keep profiles where is_published is not explicitly false
+        const published = (data.profiles || []).filter((p: any) => p.is_published !== false);
+        setProfiles(published);
       } catch (err) {
         console.error('Failed to load profiles:', err);
       } finally {
@@ -123,26 +125,6 @@ export default function DirectoryPage() {
                 {filteredProfiles.length} matches
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-2 border-t border-stone-100 flex-wrap">
-            <span className="text-xs font-bold uppercase text-stone-500 mr-2">
-              Availability (OR):
-            </span>
-            {['internship', 'full-time', 'contract'].map(opt => (
-              <button
-                key={opt}
-                onClick={() => toggleAvailability(opt)}
-                className={
-                  'px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ' +
-                  (availabilityFilter.includes(opt)
-                    ? 'bg-[#C85A32] text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200')
-                }
-              >
-                {opt} {availabilityFilter.includes(opt) && '✓'}
-              </button>
-            ))}
           </div>
         </div>
 

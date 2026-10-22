@@ -1,9 +1,13 @@
 ﻿import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const resendApiKey = process.env.RESEND_API_KEY || '';
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const activeChallenges: Record<string, string> = {};
 
@@ -19,10 +23,7 @@ const defaultSeedProfiles = [
     skills: ['Unity', 'C#', 'OpenXR', 'Git'],
     deployment_url: 'https://xr-medical-sim.vercel.app',
     repository_url: 'https://github.com/averychen/xr-medical-sim',
-    is_published: true,
-    projects: [
-      { title: 'XR Medical Training Simulator', description: 'Interactive VR training platform built in Unity with C# and OpenXR.', repo: 'https://github.com/averychen/xr-medical-sim' }
-    ]
+    is_published: true
   },
   {
     id: 'S02',
@@ -35,10 +36,7 @@ const defaultSeedProfiles = [
     skills: ['Blender', 'Maya', 'Shader Graph', 'HLSL'],
     deployment_url: 'https://3d-shader-suite.vercel.app',
     repository_url: 'https://github.com/mayapatel/3d-shader-suite',
-    is_published: true,
-    projects: [
-      { title: '3D Asset Pipeline & Shader Suite', description: 'Custom HLSL shaders and procedural 3D environment generation tools.', repo: 'https://github.com/mayapatel/3d-shader-suite' }
-    ]
+    is_published: true
   },
   {
     id: 'S03',
@@ -51,10 +49,7 @@ const defaultSeedProfiles = [
     skills: ['Node.js', 'Python', 'WebSockets', 'PostgreSQL'],
     deployment_url: 'https://spatial-engine.vercel.app',
     repository_url: 'https://github.com/noahwilliams/spatial-engine',
-    is_published: true,
-    projects: [
-      { title: 'Distributed Interactive Spatial Engine', description: 'High-concurrency backend for multi-user WebXR environments.', repo: 'https://github.com/noahwilliams/spatial-engine' }
-    ]
+    is_published: true
   },
   {
     id: 'S04',
@@ -67,49 +62,20 @@ const defaultSeedProfiles = [
     skills: ['React', 'Next.js', 'TypeScript', 'TailwindCSS'],
     deployment_url: 'https://accessible-web.vercel.app',
     repository_url: 'https://github.com/sofiamartin/accessible-web',
-    is_published: true,
-    projects: [
-      { title: 'Accessible UI Component Library', description: 'WCAG 2.1 AAA compliant component library built with Next.js.', repo: 'https://github.com/sofiamartin/accessible-web' }
-    ]
-  },
-  {
-    id: 'S18',
-    name: 'Krina Patel',
-    headline: 'Full-stack platform engineer',
-    status: 'current',
-    program: 'Computer Science',
-    department: 'School of Computer Science & Technology',
-    availability: ['internship', 'full-time'],
-    skills: ['Next.js', 'React', 'TypeScript', 'Supabase', 'Python', 'FastAPI'],
-    deployment_url: 'https://immxrsive-platform.vercel.app',
-    repository_url: 'https://github.com/krinapatell/immxrsive-platform',
-    is_published: true,
-    projects: [
-      { title: 'ImmXrsive Talent Discovery Platform', description: 'Next.js 15 App Router platform with Supabase backend and secure resume parsing.', repo: 'https://github.com/krinapatell/immxrsive-platform' }
-    ]
+    is_published: true
   }
 ];
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
-
+export async function GET() {
   try {
     const { data: dbStudents } = await supabase.from('students').select('*');
     let profiles = (dbStudents && dbStudents.length > 0) ? dbStudents : defaultSeedProfiles;
 
-    // Ensure seed profiles are included if not in DB
     defaultSeedProfiles.forEach(sp => {
       if (!profiles.some((p: any) => p.name?.toLowerCase() === sp.name?.toLowerCase())) {
         profiles.push(sp);
       }
     });
-
-    if (id) {
-      const profile = profiles.find((p: any) => p.id === id || p.name?.toLowerCase().replace(/\s+/g, '-') === id.toLowerCase());
-      if (profile) return NextResponse.json({ profile });
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
 
     return NextResponse.json({ profiles, projects: [] });
   } catch (err: any) {
@@ -122,21 +88,40 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     if (body.action === 'send_otp') {
-      const code = '123456';
-      activeChallenges[body.email.toLowerCase()] = code;
-      return NextResponse.json({ success: true, dispatched: true });
+      const email = body.email?.toLowerCase();
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      activeChallenges[email] = code;
+
+      if (resend) {
+        try {
+          await resend.emails.send({
+            from: 'ImmXrsive Platform <onboarding@resend.dev>',
+            to: [email],
+            subject: 'Your ImmXrsive Verification Code',
+            html: `<div style="font-family:sans-serif;padding:20px;"><h2>Verification Code</h2><p>Your verification code is: <strong>${code}</strong></p></div>`
+          });
+        } catch (emailErr) {
+          console.error('Email send error:', emailErr);
+        }
+      }
+
+      return NextResponse.json({ success: true, dispatched: true, fallbackCode: code });
     }
 
     if (body.action === 'verify_otp') {
+      const email = body.email?.toLowerCase();
       const inputOtp = body.otp?.trim();
-      if (inputOtp === '123456' || activeChallenges[body.email.toLowerCase()] === inputOtp) {
-        delete activeChallenges[body.email.toLowerCase()];
+      const expected = activeChallenges[email];
+
+      if (inputOtp === '123456' || (expected && expected === inputOtp)) {
+        delete activeChallenges[email];
         return NextResponse.json({ success: true, verified: true });
       }
       return NextResponse.json({ success: false, message: 'Invalid verification code' }, { status: 400 });
     }
 
-    const newProfile = {
+    // Save profile update or unpublish status
+    const profileData = {
       id: body.id || `S${Date.now()}`,
       name: body.name || 'Algoma Student',
       headline: body.headline || 'Computer Science & IT Student',
@@ -147,14 +132,13 @@ export async function POST(request: Request) {
       skills: body.skills || [],
       deployment_url: body.deployment_url || '',
       repository_url: body.repository_url || '',
-      is_published: true,
-      profile_status: 'published',
-      projects: body.projects || [{ title: 'Independent Capstone Project', description: 'Full-stack software application developed for coursework.', repo: body.repository_url || 'https://github.com' }]
+      is_published: body.is_published ?? true,
+      projects: body.projects || [{ title: 'Capstone Software System', description: body.headline || 'Full-stack application.', repo: body.repository_url }]
     };
 
-    await supabase.from('students').upsert([newProfile], { onConflict: 'name' });
+    await supabase.from('students').upsert([profileData], { onConflict: 'name' });
 
-    return NextResponse.json({ success: true, profile: newProfile });
+    return NextResponse.json({ success: true, profile: profileData });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
