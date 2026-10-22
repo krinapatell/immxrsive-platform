@@ -157,7 +157,7 @@ export default function DirectoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredProfiles.map(p => (
               <div
-                key={p.id}
+                key={p.id || p.name}
                 className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:border-[#C85A32]/40 transition"
               >
                 <div>
@@ -203,7 +203,7 @@ export default function DirectoryPage() {
                   </div>
 
                   <Link
-                    href={`/student/${p.id || p.name?.toLowerCase().replace(/\s+/g, '-')}`}
+                    href={`/student/profile?id=${encodeURIComponent(p.id || p.name)}`}
                     className="bg-[#C85A32] text-white font-semibold px-4 py-2 rounded-xl text-xs hover:bg-[#b04d2a] transition"
                   >
                     View Profile →
