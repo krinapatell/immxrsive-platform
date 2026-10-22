@@ -1,23 +1,31 @@
 ﻿{
-  "version": "2.0",
-  "project_option": "public-talent-discovery-platform",
+  "release": "R2",
+  "project_option": "talent_discovery_platform",
+  "deployment_url": "https://immxrsive-platform.vercel.app",
+  "repository_url": "https://github.com/krinapatell/immxrsive-platform",
+  "tag": "R2-submission",
   "entry_points": {
-    "frontend": "https://your-deployment-url.vercel.app",
-    "api": "https://your-deployment-url.vercel.app/api"
+    "directory": "/",
+    "student_portal": "/student",
+    "api_profiles": "/api/profiles"
   },
   "roles": {
-    "employer": {
-      "default_account": "employer@test.com",
-      "access_level": "full_search_and_review"
+    "public_employer": {
+      "access": "unauthenticated",
+      "allowed_actions": ["view_directory", "filter_candidates", "view_project_cards"]
     },
-    "talent": {
-      "default_account": "talent@test.com",
-      "access_level": "profile_management"
+    "algoma_student": {
+      "access": "otp_verified",
+      "domain_restriction": "@algomau.ca",
+      "allowed_actions": ["edit_profile", "upload_resume", "extract_skills", "publish_profile"]
     }
   },
-  "checks_mapping": {
-    "search_filters": "/search",
-    "direct_urls": "/talent/[id]",
-    "mobile_employer_workflows": "/mobile"
+  "fixtures": {
+    "resumes": [
+      "resume_clean_single_column.pdf",
+      "resume_layout_stress.pdf",
+      "resume_minimal.pdf",
+      "resume_untrusted_text.pdf"
+    ]
   }
 }

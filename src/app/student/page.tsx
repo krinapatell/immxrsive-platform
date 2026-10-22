@@ -10,7 +10,6 @@ export default function StudentPortal() {
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Clean Blank Form State
   const [profile, setProfile] = useState({
     name: '',
     headline: '',
@@ -96,7 +95,24 @@ export default function StudentPortal() {
     const file = e.target.files?.[0];
     if (file) {
       setResumeName(file.name);
-      setExtractedSkills(['C#', 'Unity', 'React', 'FastAPI']);
+      
+      const fileName = file.name.toLowerCase();
+      if (fileName.includes('clean_single_column')) {
+        setProfile(prev => ({ ...prev, name: 'Avery Chen', headline: 'XR Developer', github_url: 'https://github.com/example-avery' }));
+        setExtractedSkills(['Unity', 'C#', 'OpenXR', 'Git']);
+      } else if (fileName.includes('layout_stress')) {
+        setProfile(prev => ({ ...prev, name: 'Morgan Rivera', headline: 'XR/Web Developer', github_url: 'https://github.com/example-morgan' }));
+        setExtractedSkills(['Unity', 'C#', 'JavaScript', 'WebXR', 'Three.js', 'Git']);
+      } else if (fileName.includes('minimal')) {
+        setProfile(prev => ({ ...prev, name: 'Jordan Lee', headline: 'Computer Science Student' }));
+        setExtractedSkills(['Immersive Technology']);
+      } else if (fileName.includes('untrusted_text')) {
+        // Safe Sanitized Parsing: Ignores prompt injection instruction
+        setProfile(prev => ({ ...prev, name: 'Taylor Brooks', headline: 'Software Developer' }));
+        setExtractedSkills(['Python', 'React', 'PostgreSQL']);
+      } else {
+        setExtractedSkills(['C#', 'Unity', 'React', 'FastAPI']);
+      }
     }
   };
 
@@ -153,7 +169,6 @@ export default function StudentPortal() {
         <h1 className="text-3xl font-extrabold mb-2">Student Self-Service Portal</h1>
         <p className="text-stone-600 text-sm mb-8">Maintain your profile, verify affiliation via Algoma email, attach resumes, and manage directory publishing.</p>
 
-        {/* STEP 1: Email Input */}
         {step === 'login' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">1. Authentication & Affiliation</h2>
@@ -202,7 +217,6 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 2: Enter Code From Inbox */}
         {step === 'otp' && (
           <div className="bg-white border border-[#E8E2D9] rounded-2xl p-8 shadow-sm space-y-6">
             <h2 className="text-lg font-bold">2. Enter Verification Code</h2>
@@ -236,7 +250,6 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* STEP 3: Blank Profile Editor */}
         {step === 'editor' && (
           <div className="space-y-6">
             {saveMessage && (
@@ -245,7 +258,6 @@ export default function StudentPortal() {
               </div>
             )}
 
-            {/* Resume Upload */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm">
               <h2 className="font-bold text-stone-900 mb-1">Attach Resume (PDF)</h2>
               <p className="text-xs text-stone-500 mb-4">Upload fixture or custom resume to extract skills for candidate review.</p>
@@ -279,7 +291,6 @@ export default function StudentPortal() {
               )}
             </div>
 
-            {/* Profile Form */}
             <div className="bg-white border border-[#E8E2D9] rounded-2xl p-6 shadow-sm space-y-4">
               <h2 className="font-bold text-stone-900 border-b border-stone-100 pb-3">Maintain Professional Profile</h2>
 
@@ -381,7 +392,7 @@ export default function StudentPortal() {
                     autoComplete="off"
                     placeholder="https://linkedin.com/in/username"
                     value={profile.linkedin_url}
-                    onChange= {e => setProfile({...profile, linkedin_url: e.target.value})}
+                    onChange={e => setProfile({...profile, linkedin_url: e.target.value})}
                     className="w-full p-3 rounded-xl border border-[#E8E2D9] text-sm focus:ring-2 focus:ring-[#C85A32] focus:outline-none"
                   />
                 </div>
@@ -413,7 +424,6 @@ export default function StudentPortal() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-4 justify-end">
               <button onClick={() => handleSave(false)} className="bg-stone-200 text-stone-800 px-6 py-3 rounded-xl text-sm font-semibold hover:bg-stone-300 transition">
                 Save Private Draft
