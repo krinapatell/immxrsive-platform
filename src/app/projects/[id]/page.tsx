@@ -1,132 +1,95 @@
-'use client';
-
-import { useEffect, useState, use } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import type { Metadata } from 'next';
+import { getPublicProject } from '@/lib/students';
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  tags?: string[];
-  skills?: string[];
-  link?: string;
-  github?: string;
-  student_id?: string;
+export const dynamic = 'force-dynamic';
+
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const project = await getPublicProject(id).catch(() => null);
+  return { title: project ? `${project.title} · ImmXrsive` : 'Project not found · ImmXrsive' };
 }
 
-export default function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProject() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching project:', error);
-      } else if (data) {
-        setProject(data as Project);
-      }
-      setLoading(false);
-    }
-
-    fetchProject();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!project) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Project Not Found</h1>
-        <p className="text-gray-600 mt-2">No project matches ID: {id}</p>
-        <Link
-          href="/"
-          className="inline-block mt-4 text-indigo-600 hover:text-indigo-800 font-medium"
-        >
-          &larr; Back to Directory
-        </Link>
-      </main>
-    );
-  }
-
-  const tags = project.tags || project.skills || [];
+/** Stable project page with contributors and roles (R1.16, R1.17, R1.19). */
+export default async function ProjectPage({ params }: Props) {
+  const { id } = await params;
+  const project = await getPublicProject(id);
+  if (!project) notFound();
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Link
-        href="/"
-        className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 mb-6 font-medium"
-      >
-        &larr; Back to Directory
+    <div className="space-y-4">
+      <Link href="/" className="text-sm font-semibold text-accent-dark underline">
+        ← Back to directory
       </Link>
+      <article className="space-y-6 rounded-2xl border border-line bg-white p-6 sm:p-8">
+        <div>
+          <p className="text-sm font-semibold text-muted">{project.domain}</p>
+          <h1 className="text-3xl font-extrabold">{project.title}</h1>
+          <p className="mt-2 max-w-2xl">{project.description}</p>
+        </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-          {project.title}
-        </h1>
-
-        <p className="mt-4 text-gray-700 leading-relaxed text-lg">
-          {project.description}
-        </p>
-
-        {tags.length > 0 && (
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold"
-              >
-                {tag}
-              </span>
+        <section aria-labelledby="contributors-h">
+          <h2 id="contributors-h" className="text-lg font-bold">
+            Contributors and roles
+          </h2>
+          <ul className="mt-2 space-y-1">
+            {project.contributors.map((c, i) => (
+              <li key={c.student_id ?? `hidden-${i}`}>
+                {c.student_id ? (
+                  <Link href={`/students/${c.student_id}`} className="font-semibold text-accent-dark underline">
+                    {c.name}
+                  </Link>
+                ) : (
+                  <span className="text-muted">A contributor without a public profile</span>
+                )}{' '}
+                — {c.role}
+              </li>
             ))}
-          </div>
+          </ul>
+        </section>
+
+        <section aria-labelledby="tech-h">
+          <h2 id="tech-h" className="text-lg font-bold">
+            Technologies used in the project
+          </h2>
+          <p className="text-sm text-muted">Listed for the project as a whole; each contributor&apos;s own skills are on their profile.</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {project.technologies.map((t) => (
+              <li key={t} className="rounded-md bg-stone-100 px-2 py-1 text-sm">
+                {t}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {Object.keys(project.links).length > 0 && (
+          <section aria-labelledby="links-h">
+            <h2 id="links-h" className="text-lg font-bold">
+              Links
+            </h2>
+            <ul className="mt-2 space-y-1">
+              {Object.entries(project.links).map(([kind, url]) => (
+                <li key={kind}>
+                  <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="capitalize underline">
+                    {kind}
+                  </a>{' '}
+                  <span className="text-xs text-muted">(external site — may be unavailable)</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
-        <div className="mt-8 flex gap-4 border-t border-gray-100 pt-6">
-          {project.link && (
-            <a
-              href={project.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors"
-            >
-              Live Demo &rarr;
-            </a>
-          )}
-          {project.github && (
-            <a
-              href={project.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-md hover:bg-gray-900 transition-colors"
-            >
-              GitHub Code
-            </a>
-          )}
-        </div>
-      </div>
-    </main>
+        <Link
+          href={`/inquiry?source_type=project&source_id=${encodeURIComponent(project.id)}`}
+          className="inline-block rounded-lg bg-accent px-4 py-3 font-semibold text-white hover:bg-accent-dark"
+        >
+          Ask about this project
+        </Link>
+      </article>
+    </div>
   );
 }

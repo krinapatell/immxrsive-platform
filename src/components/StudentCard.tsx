@@ -1,56 +1,56 @@
 ﻿import Link from 'next/link';
-import { Student } from '@/types';
+import type { PublicStudent } from '@/lib/students';
 
-interface StudentCardProps {
-  student: Student;
-}
-
-export default function StudentCard({ student }: StudentCardProps) {
+/** Directory card: name, headline, key skills, availability and project count (R1.11). */
+export default function StudentCard({ student }: { student: PublicStudent }) {
+  const count = student.projects.length;
   return (
-    <div className="border rounded-lg p-5 shadow-sm hover:shadow-md transition bg-white flex flex-col justify-between">
+    <article className="flex h-full flex-col justify-between rounded-2xl border border-line bg-white p-5 shadow-sm">
       <div>
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-gray-900">{student.name}</h3>
-          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded capitalize">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg font-bold">
+            <Link href={`/students/${student.id}`} className="hover:text-accent hover:underline">
+              {student.name}
+            </Link>
+          </h2>
+          <span className="shrink-0 rounded-full border border-line px-2 py-0.5 text-xs font-semibold capitalize text-muted">
             {student.status}
           </span>
         </div>
-        
-        <p className="text-sm font-medium text-indigo-600 mb-1">{student.program}</p>
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{student.headline}</p>
+        <p className="mt-1 text-sm font-medium text-accent-dark">{student.headline}</p>
 
-        {student.availability && student.availability.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {student.availability.map((item) => (
-              <span key={item} className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
-                {item}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {student.skills && student.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-4">
-            {student.skills.slice(0, 4).map((skill) => (
-              <span key={skill} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-800 rounded">
-                {skill}
-              </span>
-            ))}
-            {student.skills.length > 4 && (
-              <span className="text-xs px-2 py-0.5 text-gray-500">
-                +{student.skills.length - 4} more
-              </span>
-            )}
-          </div>
-        )}
+        <h3 className="sr-only">Skills</h3>
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Skills">
+          {student.skills.map((skill) => (
+            <li key={skill} className="rounded-md bg-stone-100 px-2 py-1 text-xs font-medium">
+              {skill}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <Link
-        href={`/students/${student.id}`}
-        className="mt-2 inline-block text-center w-full py-2 px-4 bg-indigo-600 text-white font-medium text-sm rounded hover:bg-indigo-700 transition"
-      >
-        View Profile
-      </Link>
-    </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3 text-sm">
+        <div className="text-muted">
+          {student.availability?.length ? (
+            <span>
+              Available: <span className="font-medium capitalize text-ink">{student.availability.join(', ')}</span>
+            </span>
+          ) : (
+            <span>Availability not shown</span>
+          )}
+          <span aria-hidden="true"> · </span>
+          <span>
+            {count} {count === 1 ? 'project' : 'projects'}
+          </span>
+        </div>
+        <Link
+          href={`/students/${student.id}`}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
+          aria-label={`View profile of ${student.name}`}
+        >
+          View profile
+        </Link>
+      </div>
+    </article>
   );
 }
