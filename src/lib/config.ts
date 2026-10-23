@@ -20,6 +20,15 @@ function env(name: string): string {
   return (process.env[name] ?? '').trim();
 }
 
+/** Keep only https://xxxx.supabase.co even if a longer address (like .../rest/v1/) was pasted. */
+function originOnly(value: string): string {
+  try {
+    return value ? new URL(value).origin : '';
+  } catch {
+    return value;
+  }
+}
+
 function int(value: string, fallback: number): number {
   const n = Number.parseInt(value ?? '', 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -48,7 +57,7 @@ export const config = {
   githubClientId: env('GITHUB_CLIENT_ID'),
   githubClientSecret: env('GITHUB_CLIENT_SECRET'),
 
-  supabaseUrl: env('SUPABASE_URL') || env('NEXT_PUBLIC_SUPABASE_URL'),
+  supabaseUrl: originOnly(env('SUPABASE_URL') || env('NEXT_PUBLIC_SUPABASE_URL')),
   supabaseServiceKey: env('SUPABASE_SERVICE_ROLE_KEY'),
 };
 
