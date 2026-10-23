@@ -1,4 +1,5 @@
 import 'server-only';
+import { mail } from './config';
 
 /**
  * Sends one email. Supports two providers so the team can use whichever
@@ -10,13 +11,12 @@ import 'server-only';
 export class MailNotConfiguredError extends Error {}
 
 export async function sendMail(to: string, subject: string, text: string): Promise<void> {
-  const from = process.env.MAIL_FROM || '';
-  const fromName = process.env.MAIL_FROM_NAME || 'ImmXrsive Talent Platform';
+  const { from, fromName } = mail;
 
-  if (process.env.BREVO_API_KEY && from) {
+  if (mail.brevoKey && from) {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'api-key': mail.brevoKey, 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ sender: { email: from, name: fromName }, to: [{ email: to }], subject, textContent: text }),
       cache: 'no-store',
     });
@@ -24,10 +24,10 @@ export async function sendMail(to: string, subject: string, text: string): Promi
     return;
   }
 
-  if (process.env.RESEND_API_KEY && from) {
+  if (mail.resendKey && from) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${mail.resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: `${fromName} <${from}>`, to: [to], subject, text }),
       cache: 'no-store',
     });

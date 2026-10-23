@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { config } from '@/lib/config';
+import { config, mail } from '@/lib/config';
 import { db } from '@/lib/db';
 
 /**
@@ -16,17 +16,27 @@ export async function GET() {
     SESSION_SECRET_long_enough: config.sessionSecret.length >= 32,
     SITE_URL: config.siteUrl || null,
     ALLOWED_EMAIL_DOMAINS: config.allowedEmailDomains,
-    email_provider: process.env.BREVO_API_KEY ? 'brevo' : process.env.RESEND_API_KEY ? 'resend' : null,
-    MAIL_FROM: !!process.env.MAIL_FROM,
+    email_provider: mail.brevoKey ? 'brevo' : mail.resendKey ? 'resend' : null,
+    MAIL_FROM: !!mail.from,
+    supabase_project: config.supabaseUrl.replace(/^https:\/\//, '').split('.')[0] || null,
   };
 
-  let database: { ok: boolean; students?: number; error?: string } = { ok: false };
-  try {
-    const { count, error } = await db().from('students').select('id', { count: 'exact', head: true });
-    database = error ? { ok: false, error: `${error.code ?? ''} ${error.message ?? ''}`.trim() || 'unknown error' } : { ok: true, students: count ?? 0 };
-  } catch (err) {
-    database = { ok: false, error: err instanceof Error ? err.message : 'unknown error' };
-  }
+  const database: Record<string, unknown> = {};
+  const check = async (table: string, columns: string) => {
+    try {
+      const { count, error } = await db().from(table).select(columns, { count: 'exact' }).limit(1);
+      database[table] = error ? `ERROR ${error.code ?? ''} ${error.message ?? ''}`.trim() : `ok, ${count ?? 0} rows`;
+    } catch (err) {
+      database[table] = `ERROR ${err instanceof Error ? err.message : 'unknown'}`;
+    }
+  };
+  await check('students', 'id, profile_status, section_order, user_id');
+  await check('skills', 'name');
+  await check('projects', 'id, domain');
+  await check('project_contributors', 'project_id, role');
+  await check('app_users', 'user_id, github_id');
+  await check('verification_challenges', 'id, code_hash');
+  await check('inquiries', 'id, source_type');
 
   return NextResponse.json({ settings, database }, { headers: { 'Cache-Control': 'no-store' } });
 }
