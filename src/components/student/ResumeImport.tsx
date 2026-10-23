@@ -31,15 +31,23 @@ export default function ResumeImport({ current, onApply }: { current: Current; o
   const [otherSkills, setOtherSkills] = useState<string[]>([]);
 
   const upload = async (file: File) => {
-    setBusy(true);
     setError('');
     setMessage('');
     setItems(null);
+    if (file.size > 4 * 1024 * 1024) {
+      setError(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 4 MB — try exporting your resume again without images. Your profile hasn't changed.`);
+      return;
+    }
+    if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Please choose a PDF file. Your profile hasn\'t changed.');
+      return;
+    }
+    setBusy(true);
     try {
       const body = new FormData();
       body.append('resume', file);
       const res = await fetch('/api/me/resume', { method: 'POST', body });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: `The upload failed (error ${res.status}). Your profile hasn't changed — please try again.` }));
       if (!res.ok) {
         setError(data.error ?? 'Could not read that file.');
         return;
@@ -109,7 +117,7 @@ export default function ResumeImport({ current, onApply }: { current: Current; o
       <p className="text-sm text-muted">Upload a PDF and we&apos;ll suggest fields from it. You choose what to use. The file isn&apos;t stored.</p>
       <div>
         <label htmlFor="resume-file" className="block text-sm font-semibold">
-          Resume (PDF, up to 5 MB)
+          Resume (PDF, up to 4 MB)
         </label>
         <input
           id="resume-file"

@@ -4,7 +4,8 @@ import { listSkills } from '@/lib/students';
 import { pdfToText } from '@/lib/resume/pdf';
 import { isEmpty, parseResumeText } from '@/lib/resume/parse';
 
-const MAX_BYTES = 5 * 1024 * 1024;
+// Vercel refuses request bodies over ~4.5 MB, so the limit is 4 MB.
+const MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * Resume import (R2.13 – R2.17, R2.31, R2.32).
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     file = null;
   }
   if (!file) return NextResponse.json({ error: 'Choose a PDF file to upload.' }, { status: 400 });
-  if (file.size > MAX_BYTES) return NextResponse.json({ error: 'That file is larger than 5 MB. Please upload a smaller PDF.' }, { status: 400 });
+  if (file.size > MAX_BYTES) return NextResponse.json({ error: 'That file is larger than 4 MB. Please upload a smaller PDF (for example, export it again without images).' }, { status: 400 });
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const isPdf = bytes.length > 4 && String.fromCharCode(...bytes.slice(0, 5)) === '%PDF-';
