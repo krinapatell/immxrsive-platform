@@ -211,21 +211,28 @@ export interface PublicProject {
 }
 
 export async function getPublicProject(id: string): Promise<PublicProject | null> {
-  const { data, error } = await db()
-    .from('projects')
-    .select('*, project_contributors(role, students(id, name, profile_status))')
-    .eq('id', id)
-    .maybeSingle();
+  const { data, error } = await db().from('projects').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  type C = { role: string; students: { id: string; name: string; profile_status: string } | null };
-  const contributors = ((data.project_contributors ?? []) as C[])
-    .map((c) =>
-      c.students?.profile_status === 'published'
-        ? { student_id: c.students.id, name: c.students.name, role: c.role }
-        : { student_id: null, name: null, role: c.role },
-    )
+
+  const { data: links, error: linkError } = await db().from('project_contributors').select('student_id, role').eq('project_id', id);
+  if (linkError) throw linkError;
+  const studentIds = (links ?? []).map((l) => l.student_id as string);
+  const { data: people, error: peopleError } = studentIds.length
+    ? await db().from('students').select('id, name, profile_status').in('id', studentIds)
+    : { data: [], error: null };
+  if (peopleError) throw peopleError;
+  const byId = new Map((people ?? []).map((p) => [p.id as string, p as { id: string; name: string; profile_status: string }]));
+
+  const contributors = (links ?? [])
+    .map((l) => {
+      const s = byId.get(l.student_id as string);
+      return s?.profile_status === 'published'
+        ? { student_id: s.id, name: s.name, role: l.role as string }
+        : { student_id: null, name: null, role: l.role as string };
+    })
     .sort((a, b) => (a.student_id ?? 'ZZZ').localeCompare(b.student_id ?? 'ZZZ'));
+
   return {
     id: data.id,
     title: data.title,
