@@ -10,24 +10,50 @@
 -- All reads and writes go through the Next.js server (src/app/api/...),
 -- which uses the service-role key and enforces privacy and ownership.
 
--- Older versions of this app created differently-shaped "students" and
--- "projects" tables. Keep them (renamed) instead of deleting any data.
+-- Older versions of this app created differently-shaped tables with some of
+-- the same names. Any existing table that doesn't have this design's marker
+-- column is renamed to <name>_legacy_<timestamp> instead of being deleted,
+-- so no old data is lost and the new tables can be created cleanly.
 do $$
+declare
+  t record;
+  i record;
+  suffix text := to_char(now(), 'YYYYMMDDHH24MISS');
 begin
-  if exists (select 1 from information_schema.tables
-             where table_schema = 'public' and table_name = 'students')
-     and not exists (select 1 from information_schema.columns
-             where table_schema = 'public' and table_name = 'students'
-               and column_name = 'profile_status') then
-    alter table public.students rename to students_legacy;
-  end if;
-  if exists (select 1 from information_schema.tables
-             where table_schema = 'public' and table_name = 'projects')
-     and not exists (select 1 from information_schema.columns
-             where table_schema = 'public' and table_name = 'projects'
-               and column_name = 'technologies') then
-    alter table public.projects rename to projects_legacy;
-  end if;
+  for t in
+    select * from (values
+      ('project_contributors', 'role'),
+      ('students',             'section_order'),
+      ('projects',             'domain'),
+      ('skills',               'name'),
+      ('app_users',            'github_id'),
+      ('verification_challenges', 'code_hash'),
+      ('inquiries',            'source_type')
+    ) as v(tbl, marker)
+  loop
+    if exists (select 1 from information_schema.tables
+               where table_schema = 'public' and table_name = t.tbl)
+       and (
+         not exists (select 1 from information_schema.columns
+                     where table_schema = 'public' and table_name = t.tbl and column_name = t.marker)
+         -- the new skills table has exactly one column
+         or (t.tbl = 'skills' and (select count(*) from information_schema.columns
+                                   where table_schema = 'public' and table_name = 'skills') <> 1)
+         -- the new project_contributors table has a (project_id, student_id) primary key
+         or (t.tbl = 'project_contributors' and not exists (
+               select 1 from pg_constraint
+                where conrelid = to_regclass('public.project_contributors') and contype = 'p'))
+       ) then
+      execute format('alter table public.%I rename to %I', t.tbl, t.tbl || '_legacy_' || suffix);
+      -- Index names (including primary keys) must be unique, so rename the old ones too.
+      for i in
+        select indexname from pg_indexes
+         where schemaname = 'public' and tablename = t.tbl || '_legacy_' || suffix
+      loop
+        execute format('alter index public.%I rename to %I', i.indexname, left(i.indexname, 40) || '_legacy_' || suffix);
+      end loop;
+    end if;
+  end loop;
 end $$;
 
 create table if not exists public.skills (
@@ -122,7 +148,8 @@ create table if not exists public.inquiries (
 
 do $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'students_user_id_fkey') then
+  if not exists (select 1 from pg_constraint
+                 where conname = 'students_user_id_fkey' and conrelid = 'public.students'::regclass) then
     alter table public.students
       add constraint students_user_id_fkey foreign key (user_id)
       references public.app_users(user_id) on delete set null;
