@@ -7,7 +7,7 @@ You will end up with these settings (environment variables) in Vercel:
 
 | Name | What it is | Where it comes from |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project address | Supabase, step 1 |
+| `SUPABASE_URL` | Your Supabase project address | Supabase, step 1 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only database key (keep secret) | Supabase, step 1 |
 | `GITHUB_CLIENT_ID` | Identifies the GitHub sign-in app | GitHub, step 2 |
 | `GITHUB_CLIENT_SECRET` | GitHub sign-in secret (keep secret) | GitHub, step 2 |
@@ -32,7 +32,7 @@ Never put any of these values in GitHub, Moodle, issues or chat.
 3. Make another **New query**, paste all of `supabase/seed.sql`, and click **Run**.
    This loads the 18 fixture students, 9 projects and 24 skills.
 4. Go to **Project Settings → API** (or **Data API**). Copy:
-   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
+   - **Project URL** → `SUPABASE_URL`
    - **service_role** key (click "Reveal") → `SUPABASE_SERVICE_ROLE_KEY`
 
 ## 2. GitHub sign-in

@@ -15,7 +15,7 @@ let client: SupabaseClient | null = null;
 
 export class DatabaseNotConfiguredError extends Error {
   constructor() {
-    super('Database is not configured (SUPABASE_SERVICE_ROLE_KEY / NEXT_PUBLIC_SUPABASE_URL missing).');
+    super('Database is not configured (SUPABASE_SERVICE_ROLE_KEY / SUPABASE_URL missing).');
   }
 }
 
