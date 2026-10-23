@@ -117,7 +117,7 @@ export default function ResumeImport({ current, onApply }: { current: Current; o
       <p className="text-sm text-muted">Upload a PDF and we&apos;ll suggest fields from it. You choose what to use. The file isn&apos;t stored.</p>
       <div>
         <label htmlFor="resume-file" className="block text-sm font-semibold">
-          Resume (PDF, up to 4 MB)
+          Choose your resume (PDF, up to 4 MB)
         </label>
         <input
           id="resume-file"
@@ -129,7 +129,7 @@ export default function ResumeImport({ current, onApply }: { current: Current; o
             if (f) upload(f);
             e.target.value = '';
           }}
-          className="mt-1 block w-full text-sm"
+          className="mt-2 block w-full cursor-pointer text-sm text-muted file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-accent-dark disabled:opacity-60"
         />
       </div>
       <div aria-live="polite">
