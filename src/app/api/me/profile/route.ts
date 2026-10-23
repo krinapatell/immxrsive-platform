@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@/lib/users';
+import { currentUser, type AppUser } from '@/lib/users';
 import { getOrCreateMyProfile, saveMyProfile, setPublished } from '@/lib/profile';
 
 /**
@@ -8,25 +8,29 @@ import { getOrCreateMyProfile, saveMyProfile, setPublished } from '@/lib/profile
  * If a request tries to (by sending an id or user_id that isn't theirs),
  * it is refused with 403 so the attempt is visible (R2.30).
  */
-async function requireVerified() {
+type Guard = { user: AppUser; error: null } | { user: null; error: NextResponse };
+
+async function requireVerified(): Promise<Guard> {
   const user = await currentUser();
-  if (!user) return { error: NextResponse.json({ error: 'Sign in with GitHub first.' }, { status: 401 }) };
+  if (!user) return { user: null, error: NextResponse.json({ error: 'Sign in with GitHub first.' }, { status: 401 }) };
   if (!user.affiliation_verified_at) {
-    return { error: NextResponse.json({ error: 'Verify your Algoma email first.' }, { status: 403 }) };
+    return { user: null, error: NextResponse.json({ error: 'Verify your Algoma email first.' }, { status: 403 }) };
   }
-  return { user };
+  return { user, error: null };
 }
 
 export async function GET() {
-  const { user, error } = await requireVerified();
-  if (error) return error;
+  const guard = await requireVerified();
+  if (guard.user === null) return guard.error;
+  const user = guard.user;
   const profile = await getOrCreateMyProfile(user);
   return NextResponse.json({ profile }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function PUT(request: Request) {
-  const { user, error } = await requireVerified();
-  if (error) return error;
+  const guard = await requireVerified();
+  if (guard.user === null) return guard.error;
+  const user = guard.user;
   let body: Record<string, unknown>;
   try {
     body = await request.json();
