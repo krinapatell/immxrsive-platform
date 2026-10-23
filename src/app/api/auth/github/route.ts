@@ -21,6 +21,10 @@ export async function GET(request: Request) {
   url.searchParams.set('redirect_uri', `${origin}/api/auth/github/callback`);
   url.searchParams.set('scope', '');
   url.searchParams.set('state', state);
+  // Always show GitHub's account picker, so on a shared computer the next
+  // person can choose "Use a different account" instead of being signed in
+  // automatically as whoever is already logged in to GitHub.
+  url.searchParams.set('prompt', 'select_account');
 
   const response = NextResponse.redirect(url);
   // The state cookie protects against cross-site request forgery on the callback.

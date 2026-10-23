@@ -24,6 +24,7 @@ export default async function StudentPortal({
 }) {
   const sp = await searchParams;
   const error = typeof sp.error === 'string' ? ERRORS[sp.error] : undefined;
+  const signedOut = sp.signed_out === '1';
 
   let user: AppUser | null = null;
   let unavailable = false;
@@ -47,6 +48,15 @@ export default async function StudentPortal({
           <li>Confirm you&apos;re an Algoma student with your @algomau.ca email (only once).</li>
           <li>Build your profile, preview it, and publish when you&apos;re ready.</li>
         </ol>
+        {signedOut && (
+          <p role="status" className="mt-4 rounded-lg bg-accent-soft p-3 text-sm">
+            You&apos;re signed out of the ImmXrsive portal. On a shared computer, also sign out of{' '}
+            <a href="https://github.com/logout" className="font-semibold underline" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>
+            . The next person can pick &quot;Use a different account&quot; when signing in.
+          </p>
+        )}
         {error && (
           <p role="alert" className="mt-4 font-semibold text-red-700">
             {error}
