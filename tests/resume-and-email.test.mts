@@ -69,3 +69,13 @@ test('email domain must match exactly after the final @ (R2.04, R2.05)', () => {
   assert.equal(ok('a@b@algomau.ca'), false);
   assert.equal(ok('@algomau.ca'), false);
 });
+
+test('real PDF reading gives the same suggestions as the fixture text', async () => {
+  const { pdfToText } = await import('../src/lib/resume/pdf.ts');
+  for (const name of fs.readdirSync(new URL('../fixtures/r2/', import.meta.url))) {
+    const bytes = new Uint8Array(fs.readFileSync(new URL(`../fixtures/r2/${name}`, import.meta.url)));
+    const fromPdf = parseResumeText(await pdfToText(bytes), skills);
+    const fromText = parseResumeText(fixtureText(name), skills);
+    assert.deepEqual(fromPdf, fromText, name);
+  }
+});

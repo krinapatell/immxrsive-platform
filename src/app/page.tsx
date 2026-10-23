@@ -36,7 +36,8 @@ export default async function DirectoryPage({
         </p>
       </div>
 
-      <DirectoryFilters skills={skills} query={query} />
+      {/* key resets the text box when the search text in the URL changes (e.g. browser Back) */}
+      <DirectoryFilters key={query.q} skills={skills} query={query} />
 
       <p className="text-sm font-semibold text-muted" role="status" aria-live="polite">
         {failed ? 'The directory is temporarily unavailable.' : `${students.length} ${students.length === 1 ? 'student' : 'students'} found`}

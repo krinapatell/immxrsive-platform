@@ -1,4 +1,3 @@
-import 'server-only';
 import { getDocumentProxy } from 'unpdf';
 
 /**
@@ -33,6 +32,12 @@ export async function pdfToText(bytes: Uint8Array): Promise<string> {
       let end = -Infinity;
       for (const item of line) {
         const gap = item.x - end;
+        if (!item.str.trim()) {
+          // pdf.js reports a run of spaces as one wide blank item; a wide one is a column gap.
+          text += item.w > 18 ? '    ' : ' ';
+          end = item.x + item.w;
+          continue;
+        }
         if (text && gap > 18) text += '    ';
         else if (text && gap > 1 && !text.endsWith(' ') && !item.str.startsWith(' ')) text += ' ';
         text += item.str;
@@ -42,6 +47,5 @@ export async function pdfToText(bytes: Uint8Array): Promise<string> {
     }
     out.push('');
   }
-  await pdf.destroy?.();
   return out.join('\n');
 }

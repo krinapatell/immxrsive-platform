@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import type { DirectoryQuery } from '@/lib/students';
 
 const AVAILABILITY = ['internship', 'full-time', 'contract'];
@@ -26,8 +26,6 @@ export default function DirectoryFilters({ skills, query }: { skills: string[]; 
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState(query.q);
-
-  useEffect(() => setText(query.q), [query.q]);
 
   const go = (next: DirectoryQuery) => startTransition(() => router.replace(toUrl(next), { scroll: false }));
   const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
