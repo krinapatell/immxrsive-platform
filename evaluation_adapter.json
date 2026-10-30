@@ -1,31 +1,88 @@
-﻿{
-  "release": "R2",
-  "project_option": "talent_discovery_platform",
+{
+  "release": "R3",
   "deployment_url": "https://immxrsive-platform.vercel.app",
-  "repository_url": "https://github.com/krinapatell/immxrsive-platform",
-  "tag": "R2-submission",
-  "entry_points": {
-    "directory": "/",
-    "student_portal": "/student",
-    "api_profiles": "/api/profiles"
-  },
-  "roles": {
-    "public_employer": {
-      "access": "unauthenticated",
-      "allowed_actions": ["view_directory", "filter_candidates", "view_project_cards"]
+  "checks": [
+    {
+      "requirement_or_scenario": "R3.01, R3.02, Scenario A",
+      "entry_point": "/student/projects/new (API: POST /api/me/projects)",
+      "method_or_action": "Fill the Add project form and click Create project",
+      "role": "Verified student (GitHub sign-in + @algomau.ca verification)",
+      "setup": "Sign in at /student",
+      "expected_behavior": "A private draft project is created; the creator is maintainer and an accepted contributor"
     },
-    "algoma_student": {
-      "access": "otp_verified",
-      "domain_restriction": "@algomau.ca",
-      "allowed_actions": ["edit_profile", "upload_resume", "extract_skills", "publish_profile"]
+    {
+      "requirement_or_scenario": "R3.03, R3.04, Scenario C",
+      "entry_point": "/student/projects/new, 'Start from a GitHub repository' (API: POST /api/me/projects/import)",
+      "method_or_action": "Enter krinapatell/immxrsive-platform and click Import, edit a value, save; later remove the repository link and save",
+      "role": "Verified student",
+      "setup": "Public repository https://github.com/krinapatell/immxrsive-platform",
+      "expected_behavior": "Form is filled with editable suggestions; project stays valid with zero or several repository links"
+    },
+    {
+      "requirement_or_scenario": "R3.05, R3.08, R3.09, R3.10, R3.15, Scenario A",
+      "entry_point": "/student/projects/{id} Teammates section (API: POST /api/me/projects/{id} {action:'invite'|'accept'|'decline'})",
+      "method_or_action": "Maintainer invites by GitHub username with a standard role; invitee accepts or declines under /student/projects",
+      "role": "Maintainer, then invited verified student",
+      "setup": "Invitee must have signed in and verified once",
+      "expected_behavior": "Invitee is not on /projects/{id} until accepted; after accepting, one project page lists both contributors with roles"
+    },
+    {
+      "requirement_or_scenario": "R3.11, R3.12, Scenario B",
+      "entry_point": "/student/projects/{id} 'My contribution' (API: POST /api/me/projects/{id} {action:'my_contribution'})",
+      "method_or_action": "Contributor edits own statement and unticks 'Show this project on my profile'",
+      "role": "Accepted contributor",
+      "setup": "Shared project with two accepted contributors",
+      "expected_behavior": "Only the contributor's own row changes; the maintainer has no control for it; hiding removes it from their profile but not from the project page"
+    },
+    {
+      "requirement_or_scenario": "R3.06, R3.07, R3.13, R3.26",
+      "entry_point": "/student/projects/{id} Teammates section (actions remove, restore, transfer)",
+      "method_or_action": "Remove a contributor, then Restore; transfer maintenance",
+      "role": "Maintainer",
+      "setup": "Shared project with two accepted contributors",
+      "expected_behavior": "Removal is a reversible soft delete; transfer keeps the same /projects/{id} URL"
+    },
+    {
+      "requirement_or_scenario": "R3.16, Scenario D",
+      "entry_point": "/student/projects/new (API: POST /api/me/projects, POST /api/me/projects/check)",
+      "method_or_action": "Create a project with https://github.com/example-org/xr-anatomy",
+      "role": "Verified student",
+      "setup": "Fixture project P04 owns that repository (fixtures/r3/project_duplicate_cases.json)",
+      "expected_behavior": "Warning with View project / Ask to join; similar titles with other repositories are not merged"
+    },
+    {
+      "requirement_or_scenario": "R3.17, Scenario F",
+      "entry_point": "/student/projects/{id} Shared project details (API: PUT /api/me/projects/{id} with version)",
+      "method_or_action": "Open the same project in two maintainer sessions, save in A, then save in B without reloading",
+      "role": "Maintainer (shared fields are maintainer-only)",
+      "setup": "Any project you maintain",
+      "expected_behavior": "B's save is refused with a conflict message showing A's newer version; nothing is overwritten"
+    },
+    {
+      "requirement_or_scenario": "R3.18 - R3.23, Scenario G, Scenario I",
+      "entry_point": "/projects/{id}",
+      "method_or_action": "Open a project with a demo; use Play demo; set a broken demo URL; view at 390px",
+      "role": "Public",
+      "setup": "Demo https://immxrsive-platform.vercel.app/demos/working-demo.html, fallback https://immxrsive-platform.vercel.app/demos/fallback.svg; broken example: fixture P07",
+      "expected_behavior": "Play demo / Watch video / View source links, fallback preview, page and navigation keep working; no horizontal scroll at 390px"
+    },
+    {
+      "requirement_or_scenario": "R3.24, Scenario H",
+      "entry_point": "PUT /api/me/projects/{id}, POST /api/me/projects/{id}",
+      "method_or_action": "As a student who is not the maintainer, send an update for another project's id",
+      "role": "Verified student who is not the maintainer",
+      "setup": "Any project id, e.g. P01",
+      "expected_behavior": "403 'Only the project maintainer can change shared project information.'"
+    },
+    {
+      "requirement_or_scenario": "R3.25 (R1/R2 regression)",
+      "entry_point": "/ , /api/students, /students/{id}, /student, /inquiry",
+      "method_or_action": "Directory filters, profile privacy/publication, employer inquiry",
+      "role": "Public / verified student",
+      "setup": "Release 1 fixtures loaded by supabase/seed.sql",
+      "expected_behavior": "Release 1 and 2 behaviour unchanged"
     }
-  },
-  "fixtures": {
-    "resumes": [
-      "resume_clean_single_column.pdf",
-      "resume_layout_stress.pdf",
-      "resume_minimal.pdf",
-      "resume_untrusted_text.pdf"
-    ]
-  }
+  ],
+  "fixture_setup": "supabase/schema.sql (includes Release 3 changes and standard_roles.json) and supabase/seed.sql (Release 1 students, projects, skills). Release 3 demo fixtures are served from /demos/.",
+  "test_access": "Testers sign in with their own GitHub account and verify their own @algomau.ca email at /student. No shared passwords."
 }
