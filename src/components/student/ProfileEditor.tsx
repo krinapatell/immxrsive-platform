@@ -334,7 +334,7 @@ export default function ProfileEditor({ initial, standardSkills, githubLogin }: 
                   value={e}
                   maxLength={300}
                   onChange={(ev) => set('experience', draft.experience.map((x, j) => (j === i ? ev.target.value : x)))}
-                  className="flex-1 rounded-lg border border-line px-3 py-2"
+                  className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2"
                 />
                 <button type="button" onClick={() => set('experience', draft.experience.filter((_, j) => j !== i))} className="rounded-lg border border-line px-3" aria-label={`Remove experience entry ${i + 1}`}>
                   Remove

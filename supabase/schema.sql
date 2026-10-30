@@ -175,3 +175,67 @@ as $$
    where id = p_id and used_at is null and expires_at > now()
   returning true;
 $$;
+
+-- ===================================================================
+-- Release 3: shared projects, contributors, invitations and demos
+-- Safe to run more than once. Existing Release 1 fixture projects keep
+-- working: they become published projects with accepted contributors.
+-- ===================================================================
+
+create table if not exists public.project_roles (
+  name text primary key
+);
+alter table public.project_roles enable row level security;
+insert into public.project_roles (name) values
+  ('Software Developer'),('XR Developer'),('Frontend Developer'),('Backend Developer'),
+  ('Game Developer'),('3D Artist'),('Technical Artist'),('UI/UX Designer'),
+  ('Project Manager'),('Researcher'),('QA/Tester'),('Data/AI Developer')
+on conflict do nothing;
+
+alter table public.projects add column if not exists maintainer_student_id text references public.students(id) on delete set null;
+alter table public.projects add column if not exists publish_status text not null default 'published'
+  check (publish_status in ('draft','published'));
+alter table public.projects add column if not exists project_status text not null default 'completed'
+  check (project_status in ('in-progress','completed'));
+alter table public.projects add column if not exists project_date text not null default '';
+alter table public.projects add column if not exists repositories text[] not null default '{}';
+alter table public.projects add column if not exists repo_keys text[] not null default '{}';
+alter table public.projects add column if not exists demo_url text not null default '';
+alter table public.projects add column if not exists video_url text not null default '';
+alter table public.projects add column if not exists fallback_image_url text not null default '';
+alter table public.projects add column if not exists fallback_text text not null default '';
+alter table public.projects add column if not exists version int not null default 1;
+alter table public.projects add column if not exists created_at timestamptz not null default now();
+alter table public.projects add column if not exists updated_at timestamptz not null default now();
+create index if not exists projects_repo_keys_idx on public.projects using gin (repo_keys);
+
+-- Contributor relationship. status: invited -> accepted | declined;
+-- requested (asked to join) -> accepted | declined; accepted -> removed (soft
+-- delete, restorable by the maintainer). Rows are never deleted once accepted.
+alter table public.project_contributors add column if not exists status text not null default 'accepted'
+  check (status in ('invited','requested','accepted','declined','removed'));
+alter table public.project_contributors add column if not exists statement text not null default '';
+alter table public.project_contributors add column if not exists featured boolean not null default true;
+alter table public.project_contributors add column if not exists invited_by text;
+alter table public.project_contributors add column if not exists created_at timestamptz not null default now();
+alter table public.project_contributors add column if not exists updated_at timestamptz not null default now();
+alter table public.project_contributors add column if not exists removed_at timestamptz;
+alter table public.project_contributors add column if not exists removed_by text;
+
+-- Move the Release 1 fixture links into the new structured fields (once).
+update public.projects set repositories = array[links->>'repository']
+ where repositories = '{}' and coalesce(links->>'repository','') <> '';
+update public.projects set demo_url = links->>'demo'
+ where demo_url = '' and coalesce(links->>'demo','') <> '';
+update public.projects set video_url = links->>'video'
+ where video_url = '' and coalesce(links->>'video','') <> '';
+-- Fixture for the duplicate-warning test (fixtures/r3/project_duplicate_cases.json):
+-- the existing "XR Anatomy Lab" project owns this repository.
+update public.projects set repositories = array['https://github.com/example-org/xr-anatomy']
+ where id = 'P04' and repositories = '{}';
+-- Normalized repository keys used for duplicate detection
+-- (same rule as repoKey() in src/lib/projects.ts).
+update public.projects p set repo_keys = coalesce((
+  select array_agg(distinct lower(regexp_replace(regexp_replace(regexp_replace(trim(r),
+           '^https?://(www\.)?', ''), '/+$', ''), '\.git$', '')))
+    from unnest(p.repositories) r where trim(r) <> ''), '{}');

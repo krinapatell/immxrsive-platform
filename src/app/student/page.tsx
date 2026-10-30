@@ -1,3 +1,4 @@
+import Link from 'next/link';
 ﻿import { currentUser, type AppUser } from '@/lib/users';
 import { getOrCreateMyProfile } from '@/lib/profile';
 import { listSkills } from '@/lib/students';
@@ -91,7 +92,12 @@ export default async function StudentPortal({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-extrabold">Your profile</h1>
-        {signOut}
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/student/projects" className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-black">
+            My projects
+          </Link>
+          {signOut}
+        </div>
       </div>
       <ProfileEditor initial={profile} standardSkills={skills} githubLogin={user.github_login} />
     </div>
