@@ -315,7 +315,11 @@ export async function createProject(
   const { error: cErr } = await db()
     .from('project_contributors')
     .insert({ project_id: id, student_id: student.id, role, status: 'accepted', featured: true, invited_by: student.id });
-  if (cErr) throw cErr;
+  if (cErr) {
+    // Never leave a project with nobody attached: undo the first insert.
+    await db().from('projects').delete().eq('id', id);
+    throw cErr;
+  }
   return { project: data as ProjectRow };
 }
 

@@ -239,3 +239,27 @@ update public.projects p set repo_keys = coalesce((
   select array_agg(distinct lower(regexp_replace(regexp_replace(regexp_replace(trim(r),
            '^https?://(www\.)?', ''), '/+$', ''), '\.git$', '')))
     from unnest(p.repositories) r where trim(r) <> ''), '{}');
+
+-- Repair: when an older table was renamed to *_legacy_*, foreign keys that
+-- pointed to it followed the rename. Point them back to the current table.
+do $$
+declare r record; base text;
+begin
+  for r in
+    select c.conname, c.conrelid::regclass as tbl, c.confrelid::regclass::text as ref,
+           pg_get_constraintdef(c.oid) as def
+      from pg_constraint c
+      join pg_namespace n on n.oid = c.connamespace
+     where c.contype = 'f' and n.nspname = 'public'
+       and c.confrelid::regclass::text ~ '_legacy_[0-9]+$'
+       and c.conrelid::regclass::text !~ '_legacy_[0-9]+$'
+  loop
+    base := regexp_replace(r.ref, '_legacy_[0-9]+$', '');
+    if to_regclass(base) is not null then
+      execute format('alter table %s drop constraint %I', r.tbl, r.conname);
+      execute format('alter table %s add constraint %I %s not valid', r.tbl, r.conname,
+                     replace(r.def, 'REFERENCES ' || r.ref, 'REFERENCES ' || base));
+      raise notice 'fixed % on % -> %', r.conname, r.tbl, base;
+    end if;
+  end loop;
+end $$;
