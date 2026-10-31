@@ -103,22 +103,37 @@ export function toPublic(row: StudentRow, projects: ProjectRef[]): PublicStudent
   return out;
 }
 
+/**
+ * Projects shown on each student's profile: accepted contributions to
+ * published projects that the student has chosen to feature (R3.09, R3.12).
+ */
 async function projectsFor(studentIds: string[]): Promise<Map<string, ProjectRef[]>> {
   const map = new Map<string, ProjectRef[]>();
   if (!studentIds.length) return map;
-  const { data, error } = await db()
+  const { data: links, error } = await db()
     .from('project_contributors')
-    .select('student_id, role, projects(id, title)')
-    .in('student_id', studentIds);
+    .select('student_id, project_id, role')
+    .in('student_id', studentIds)
+    .eq('status', 'accepted')
+    .eq('featured', true);
   if (error) throw error;
-  for (const row of data ?? []) {
-    const p = row.projects as unknown as { id: string; title: string } | null;
-    if (!p) continue;
-    const list = map.get(row.student_id) ?? [];
-    list.push({ id: p.id, title: p.title, role: row.role });
-    map.set(row.student_id, list);
+  const projectIds = [...new Set((links ?? []).map((l) => l.project_id as string))];
+  if (!projectIds.length) return map;
+  const { data: projects, error: pErr } = await db()
+    .from('projects')
+    .select('id, title')
+    .in('id', projectIds)
+    .eq('publish_status', 'published');
+  if (pErr) throw pErr;
+  const titles = new Map((projects ?? []).map((p) => [p.id as string, p.title as string]));
+  for (const l of links ?? []) {
+    const title = titles.get(l.project_id as string);
+    if (!title) continue;
+    const list = map.get(l.student_id as string) ?? [];
+    list.push({ id: l.project_id as string, title, role: l.role as string });
+    map.set(l.student_id as string, list);
   }
-  for (const list of map.values()) list.sort((a, b) => a.id.localeCompare(b.id));
+  for (const list of map.values()) list.sort((x, y) => x.id.localeCompare(y.id));
   return map;
 }
 
@@ -199,23 +214,42 @@ export async function listSkills(): Promise<string[]> {
   return (data ?? []).map((r) => r.name as string);
 }
 
+export interface PublicContributor {
+  /** null when the contributor's own profile isn't public: shown by role only (R1.20). */
+  student_id: string | null;
+  name: string | null;
+  role: string;
+  statement: string;
+  is_maintainer: boolean;
+}
+
 export interface PublicProject {
   id: string;
   title: string;
   description: string;
   domain: string;
   technologies: string[];
-  links: Record<string, string>;
-  /** Contributors with unpublished profiles are listed by role only, with no name or link (R1.20). */
-  contributors: { student_id: string | null; name: string | null; role: string }[];
+  project_status: string;
+  project_date: string;
+  repositories: string[];
+  demo_url: string;
+  video_url: string;
+  fallback_image_url: string;
+  fallback_text: string;
+  /** Accepted contributors only. Invited, requested, declined and removed are never public (R3.09). */
+  contributors: PublicContributor[];
 }
 
 export async function getPublicProject(id: string): Promise<PublicProject | null> {
-  const { data, error } = await db().from('projects').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await db().from('projects').select('*').eq('id', id).eq('publish_status', 'published').maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
-  const { data: links, error: linkError } = await db().from('project_contributors').select('student_id, role').eq('project_id', id);
+  const { data: links, error: linkError } = await db()
+    .from('project_contributors')
+    .select('student_id, role, statement, created_at')
+    .eq('project_id', id)
+    .eq('status', 'accepted');
   if (linkError) throw linkError;
   const studentIds = (links ?? []).map((l) => l.student_id as string);
   const { data: people, error: peopleError } = studentIds.length
@@ -224,14 +258,19 @@ export async function getPublicProject(id: string): Promise<PublicProject | null
   if (peopleError) throw peopleError;
   const byId = new Map((people ?? []).map((p) => [p.id as string, p as { id: string; name: string; profile_status: string }]));
 
-  const contributors = (links ?? [])
+  const contributors: PublicContributor[] = (links ?? [])
     .map((l) => {
       const s = byId.get(l.student_id as string);
-      return s?.profile_status === 'published'
-        ? { student_id: s.id, name: s.name, role: l.role as string }
-        : { student_id: null, name: null, role: l.role as string };
+      const visible = s?.profile_status === 'published';
+      return {
+        student_id: visible ? s!.id : null,
+        name: visible ? s!.name : null,
+        role: l.role as string,
+        statement: visible ? ((l.statement as string) ?? '') : '',
+        is_maintainer: data.maintainer_student_id === l.student_id,
+      };
     })
-    .sort((a, b) => (a.student_id ?? 'ZZZ').localeCompare(b.student_id ?? 'ZZZ'));
+    .sort((a, b) => Number(b.is_maintainer) - Number(a.is_maintainer) || (a.student_id ?? 'ZZZ').localeCompare(b.student_id ?? 'ZZZ'));
 
   return {
     id: data.id,
@@ -239,7 +278,13 @@ export async function getPublicProject(id: string): Promise<PublicProject | null
     description: data.description,
     domain: data.domain,
     technologies: data.technologies ?? [],
-    links: data.links ?? {},
+    project_status: data.project_status,
+    project_date: data.project_date ?? '',
+    repositories: data.repositories ?? [],
+    demo_url: data.demo_url ?? '',
+    video_url: data.video_url ?? '',
+    fallback_image_url: data.fallback_image_url ?? '',
+    fallback_text: data.fallback_text ?? '',
     contributors,
   };
 }
