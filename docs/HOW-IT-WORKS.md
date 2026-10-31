@@ -77,8 +77,52 @@ There is no way to name another profile: the server always edits the row whose
 order sections are drawn in; they never touch skills or availability. All text
 is shown as plain text by React, so no one can inject HTML or scripts.
 
+## Projects (Release 3)
+
+All the logic is in `src/lib/projects.ts`; the pages are under `src/app/student/projects/`
+and the public page is `src/app/projects/[id]/page.tsx`.
+
+**1. One project, many people (R3.05–R3.07).** A project is one row in `projects`.
+Each person on it is one row in `project_contributors` with a `status`:
+invited → accepted / declined, requested → accepted / declined, accepted → removed.
+Only *accepted* people appear publicly. The creator becomes the `maintainer`
+and can hand that job to another accepted contributor; the project id (and URL)
+never changes.
+
+**2. Who can edit what (decision).** Only the maintainer edits shared fields
+(title, description, links, demo…). Everyone edits only their *own* role,
+contribution statement and "show on my profile" switch. The server checks this
+on every request, not just the buttons.
+
+**3. Invitations (R3.08–R3.10).** The maintainer types an exact GitHub username.
+The person must already have signed in and verified, so nobody can browse a list
+of students. Invited people see the invite under My projects and accept or decline.
+
+**4. Removal (decision: reversible soft delete).** Removing someone only sets
+`status = removed` (plus who/when). Their statement is kept and the maintainer
+can Restore them. Nothing is hard-deleted.
+
+**5. Duplicates (R3.16).** `src/lib/repo.ts` turns a repository URL into a key
+(no `https://`, no `www.`, lowercase, no trailing `/` or `.git`). If a new
+project uses a repository key that's already connected, the form warns and offers
+View project / Ask to join / Save anyway. Similar titles are only a hint.
+
+**6. No lost updates (R3.17).** Every project has a `version` number. A save
+sends the version it loaded; the database update only matches if the version is
+unchanged. If someone saved in between, the save is refused with 409 and the
+form offers the newer version.
+
+**7. GitHub import (R3.01–R3.03).** We call GitHub's public API for the repo and
+its languages and *fill the form* with suggestions. Nothing is saved until the
+student clicks Create.
+
+**8. Demos (R3.18–R3.22).** Demo, video and source are separate links (http/https
+only, no embed code). The public page shows Play demo / Watch video / View source
+buttons that open in a new tab, plus a fallback image and text, so the page still
+works if a demo is down.
+
 ## Tests
 
-`npm test` runs `tests/resume-and-email.test.mts`: the four resume fixtures
+`npm test` runs `tests/resume-and-email.test.mts` and `tests/repo.test.mts`: the four resume fixtures
 (including "no invented facts" and the untrusted-text fixture) and the email
 domain rule.
