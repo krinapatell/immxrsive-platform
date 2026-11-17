@@ -263,3 +263,140 @@ begin
     end if;
   end loop;
 end $$;
+
+-- =====================================================================
+-- Release 4: staff, official project verification, industry partners,
+-- collaborations and student partner requests. Safe to run more than once.
+-- =====================================================================
+
+-- Staff role (R4.01). An account becomes staff only on the server, by
+-- entering the staff access code (STAFF_ACCESS_CODE, never in the repo).
+create table if not exists public.staff_members (
+  user_id     uuid primary key references public.app_users(user_id) on delete cascade,
+  granted_at  timestamptz not null default now()
+);
+create table if not exists public.staff_access_attempts (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.app_users(user_id) on delete cascade,
+  ok          boolean not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists staff_access_attempts_user_idx on public.staff_access_attempts (user_id, created_at desc);
+
+-- Official ImmXrsive verification of a project (R4.04 - R4.06).
+alter table public.projects add column if not exists verified_at timestamptz;
+alter table public.projects add column if not exists verified_by uuid references public.app_users(user_id) on delete set null;
+
+create table if not exists public.project_verification_requests (
+  id              uuid primary key default gen_random_uuid(),
+  project_id      text not null references public.projects(id) on delete cascade,
+  requested_by    text not null references public.students(id) on delete cascade,
+  note            text not null default '',
+  evidence_url    text not null default '',
+  status          text not null default 'pending' check (status in ('pending','approved','rejected')),
+  staff_note      text not null default '',
+  reviewed_by     uuid references public.app_users(user_id) on delete set null,
+  reviewed_at     timestamptz,
+  created_at      timestamptz not null default now()
+);
+create unique index if not exists project_verification_one_pending
+  on public.project_verification_requests (project_id) where status = 'pending';
+
+-- Companies / industry partners (R4.07 - R4.14).
+create table if not exists public.companies (
+  id            text primary key,
+  name          text not null,
+  website       text not null default '',
+  domain        text not null default '',
+  description   text not null default '',
+  sector        text not null default '',
+  keywords      text[] not null default '{}',
+  location      text not null default '',
+  status        text not null default 'draft' check (status in ('draft','published')),
+  provenance    jsonb not null default '{}'::jsonb,   -- per field: where the value came from
+  created_by    uuid references public.app_users(user_id) on delete set null,
+  published_at  timestamptz,
+  published_by  uuid references public.app_users(user_id) on delete set null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists companies_domain_idx on public.companies (domain);
+
+-- Every website import attempt, kept as source history (R4.12).
+create table if not exists public.company_imports (
+  id           uuid primary key default gen_random_uuid(),
+  company_id   text references public.companies(id) on delete set null,
+  source_url   text not null,
+  ok           boolean not null,
+  error        text not null default '',
+  candidates   jsonb not null default '{}'::jsonb,
+  imported_by  uuid references public.app_users(user_id) on delete set null,
+  fetched_at   timestamptz not null default now()
+);
+
+-- Collaborations (R4.15 - R4.18, R4.23).
+create table if not exists public.collaborations (
+  id              text primary key,
+  company_id      text not null references public.companies(id) on delete cascade,
+  title           text not null,
+  year_start      int  not null,
+  year_end        int,
+  description     text not null default '',
+  outcome         text not null default '',
+  status          text not null default 'current' check (status in ('current','past')),
+  visibility      text not null default 'public' check (visibility in ('public','limited','private')),
+  public_summary  text not null default '',   -- the only text shown for a Limited collaboration
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create table if not exists public.collaboration_projects (
+  collaboration_id text not null references public.collaborations(id) on delete cascade,
+  project_id       text not null references public.projects(id) on delete cascade,
+  primary key (collaboration_id, project_id)
+);
+create table if not exists public.collaboration_students (
+  collaboration_id text not null references public.collaborations(id) on delete cascade,
+  student_id       text not null references public.students(id) on delete cascade,
+  primary key (collaboration_id, student_id)
+);
+
+-- Student partner association requests (R4.20, R4.21) and the official
+-- relationships staff approve. A project can have several partners (R4.17).
+create table if not exists public.partner_requests (
+  id                 uuid primary key default gen_random_uuid(),
+  project_id         text not null references public.projects(id) on delete cascade,
+  requested_by       text not null references public.students(id) on delete cascade,
+  company_id         text references public.companies(id) on delete set null,
+  suggested_name     text not null default '',
+  suggested_website  text not null default '',
+  explanation        text not null default '',
+  status             text not null default 'pending' check (status in ('pending','approved','rejected')),
+  staff_note         text not null default '',
+  reviewed_by        uuid references public.app_users(user_id) on delete set null,
+  reviewed_at        timestamptz,
+  created_at         timestamptz not null default now()
+);
+create table if not exists public.project_partners (
+  project_id   text not null references public.projects(id) on delete cascade,
+  company_id   text not null references public.companies(id) on delete cascade,
+  request_id   uuid references public.partner_requests(id) on delete set null,
+  approved_by  uuid references public.app_users(user_id) on delete set null,
+  approved_at  timestamptz not null default now(),
+  primary key (project_id, company_id)
+);
+
+-- Inquiries can now start from a partner or a collaboration page (R4.24).
+alter table public.inquiries drop constraint if exists inquiries_source_type_check;
+alter table public.inquiries add constraint inquiries_source_type_check
+  check (source_type in ('student','project','company','collaboration'));
+
+alter table public.staff_members                 enable row level security;
+alter table public.staff_access_attempts         enable row level security;
+alter table public.project_verification_requests enable row level security;
+alter table public.companies                     enable row level security;
+alter table public.company_imports               enable row level security;
+alter table public.collaborations                enable row level security;
+alter table public.collaboration_projects        enable row level security;
+alter table public.collaboration_students        enable row level security;
+alter table public.partner_requests              enable row level security;
+alter table public.project_partners              enable row level security;

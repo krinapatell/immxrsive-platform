@@ -1,7 +1,103 @@
 {
-  "release": "R3",
+  "release": "R4",
   "deployment_url": "https://immxrsive-platform.vercel.app",
   "checks": [
+    {
+      "requirement_or_scenario": "R4.01, R4.03, Scenario A",
+      "entry_point": "/staff",
+      "method_or_action": "Open the staff home",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "Pending items exist (see release_submission.md)",
+      "expected_behavior": "Task groups Verify projects, Review partner requests, Review companies and Published partners, each with a clear action button"
+    },
+    {
+      "requirement_or_scenario": "R4.02, Scenario K",
+      "entry_point": "POST /api/staff/companies, /api/staff/companies/import, /api/staff/verifications/{id}, /api/staff/partner-requests/{id}, /api/staff/collaborations/{id}, /api/staff/projects/{id}",
+      "method_or_action": "Call a staff endpoint directly while signed in as an ordinary student, or signed out",
+      "role": "Ordinary verified student; anonymous visitor",
+      "setup": "None",
+      "expected_behavior": "401 when signed out, 403 'Only ImmXrsive staff can do this.' for a student; nothing changes"
+    },
+    {
+      "requirement_or_scenario": "R4.04, R4.06",
+      "entry_point": "/student/projects/{id} 'Official ImmXrsive verification' (API: POST /api/me/projects/{id} {action:'request_verification', note, evidence_url})",
+      "method_or_action": "Maintainer requests verification",
+      "role": "Project maintainer",
+      "setup": "Any project you maintain",
+      "expected_behavior": "Shows 'Waiting for staff review'; no badge until staff approve; students cannot set verified_at through any project API"
+    },
+    {
+      "requirement_or_scenario": "R4.05",
+      "entry_point": "/staff -> Verify projects -> Review project (/staff/verifications/{id}; API: POST /api/staff/verifications/{id} {action:'approve'|'reject', staff_note})",
+      "method_or_action": "Review the project, contributors, note and evidence; approve or reject",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "A pending request",
+      "expected_behavior": "Approve shows 'Verified by ImmXrsive' on /projects/{id}; reject needs a message, which the student sees"
+    },
+    {
+      "requirement_or_scenario": "R4.07",
+      "entry_point": "/staff/companies/new (API: POST /api/staff/companies)",
+      "method_or_action": "Type name, website, description, sector, keywords, location; Save as draft",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "None",
+      "expected_behavior": "Company saved as a draft and listed under Review companies"
+    },
+    {
+      "requirement_or_scenario": "R4.08, R4.09, R4.12, Scenario B",
+      "entry_point": "/staff/companies/new 'Fill from website' (API: POST /api/staff/companies/import), then /staff/companies/{id}",
+      "method_or_action": "Enter https://immxrsive-platform.vercel.app/fixtures/r4/company_normal.html, review/edit a value, Save as draft, then Publish company",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "Fixture hosted unchanged at that URL",
+      "expected_behavior": "Suggested name North Shore Simulations, location Sault Ste. Marie, Ontario, keywords simulation, XR, training; saved as draft; public only after Publish; 'Where this information came from' shows the source URL and time per field"
+    },
+    {
+      "requirement_or_scenario": "R4.11, Scenario C",
+      "entry_point": "/staff/companies/new 'Fill from website'",
+      "method_or_action": "Import https://immxrsive-platform.vercel.app/fixtures/r4/company_sparse.html, or a URL that fails (e.g. https://immxrsive-platform.vercel.app/fixtures/r4/missing.html), after typing some values",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "None",
+      "expected_behavior": "Sparse: name and website filled, 'Not found on the page: description, sector, keywords, location'; failure: plain message and typed values are kept"
+    },
+    {
+      "requirement_or_scenario": "R4.10 (chosen challenge), Scenario D",
+      "entry_point": "/staff/companies/new 'Fill from website'",
+      "method_or_action": "Import https://immxrsive-platform.vercel.app/fixtures/r4/company_prompt_injection.html",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "None",
+      "expected_behavior": "Only name/description/website/sector/keywords suggested; the embedded instructions do not verify, publish or change permissions; result is a draft; nothing from the page runs as script on /staff or /partners pages"
+    },
+    {
+      "requirement_or_scenario": "R4.15, R4.16, R4.17, R4.23, Scenario G",
+      "entry_point": "/staff/companies/{id} 'Add a collaboration' (API: POST /api/staff/companies/{id} {action:'add_collaboration'}; edit: PUT /api/staff/collaborations/{id})",
+      "method_or_action": "Add two collaborations in different years with projects/students, one Current and one Past",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "A published company",
+      "expected_behavior": "/partners/{id} shows 'Working together now' and 'Past collaborations' with projects and students linked"
+    },
+    {
+      "requirement_or_scenario": "R4.18, Scenario H",
+      "entry_point": "/staff/companies/{id} collaboration 'Who can see it?'; public /partners/{id} and GET /api/partners/{id}",
+      "method_or_action": "Create Public, Limited and Private collaborations, then view the public page logged out",
+      "role": "Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread; anonymous visitor",
+      "setup": "A published company",
+      "expected_behavior": "Private is absent; Limited shows only the year and its short public description (no title, details, projects or names)"
+    },
+    {
+      "requirement_or_scenario": "R4.20, R4.21, Scenario I",
+      "entry_point": "/student/projects/{id} 'Industry partners' (API: POST /api/me/projects/{id} {action:'request_partner'}); staff: /staff/partner-requests/{id} (API: POST /api/staff/partner-requests/{id})",
+      "method_or_action": "Maintainer selects or suggests a company and explains; staff approve or reject",
+      "role": "Project maintainer, then Verified student account with staff tools turned on: sign in at /student, verify @algomau.ca, open /staff and enter the staff access code supplied privately in the instructor's QA email thread",
+      "setup": "A published company exists for 'select'",
+      "expected_behavior": "Request is 'Waiting for staff review' and not public; after approval the project page and partner page show the relationship; after rejection the student sees the message"
+    },
+    {
+      "requirement_or_scenario": "R4.22, R4.24, R4.26, Scenario J",
+      "entry_point": "/partners, /partners/{id}, /inquiry?source_type=company&source_id={id}, /inquiry?source_type=collaboration&source_id={id}",
+      "method_or_action": "Browse partners, open one, follow projects/students, start an inquiry; repeat at 390px",
+      "role": "Anonymous visitor",
+      "setup": "Published partner with collaborations",
+      "expected_behavior": "Plain-language partner page; inquiry form shows the company or collaboration it is about; usable at 390px"
+    },
     {
       "requirement_or_scenario": "R3.01, R3.02, Scenario A",
       "entry_point": "/student/projects/new (API: POST /api/me/projects)",
@@ -83,6 +179,7 @@
       "expected_behavior": "Release 1 and 2 behaviour unchanged"
     }
   ],
-  "fixture_setup": "supabase/schema.sql (includes Release 3 changes and standard_roles.json) and supabase/seed.sql (Release 1 students, projects, skills). Release 3 demo fixtures are served from /demos/.",
-  "test_access": "Testers sign in with their own GitHub account and verify their own @algomau.ca email at /student. No shared passwords."
+  "fixture_setup": "supabase/schema.sql (Release 1-4 tables, R3 standard roles) and supabase/seed.sql (Release 1 data). Release 4 company fixtures are served unchanged at https://immxrsive-platform.vercel.app/fixtures/r4/{company_normal,company_sparse,company_prompt_injection,company_same_name_other_domain}.html. collaboration_seed.json entries were entered through the staff screens. Release 3 demo fixtures are under /demos/.",
+  "test_access": "Students/visitors: testers sign in with their own GitHub account and verify their own @algomau.ca email at /student. Staff: the same kind of account, then /staff and the staff access code supplied privately (instructor QA email thread). 'Turn off staff tools' on /staff returns the account to an ordinary student. No shared passwords.",
+  "chosen_challenge": "R4.10 - Untrusted Website Content"
 }

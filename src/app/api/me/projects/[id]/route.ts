@@ -11,6 +11,7 @@ import {
   updateMyContribution,
   updateShared,
 } from '@/lib/projects';
+import { requestPartner, requestVerification } from '@/lib/partners';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -77,6 +78,10 @@ export async function POST(request: Request, ctx: Ctx) {
         return NextResponse.json(await maintainerAction(user, id, String(body.student_id ?? ''), body.action));
       case 'transfer':
         return NextResponse.json(await transferMaintenance(user, id, String(body.student_id ?? '')));
+      case 'request_verification':
+        return NextResponse.json(await requestVerification(user, id, body), { status: 201 });
+      case 'request_partner':
+        return NextResponse.json(await requestPartner(user, id, body), { status: 201 });
       case 'my_contribution':
         return NextResponse.json(await updateMyContribution(user, id, body));
       default:

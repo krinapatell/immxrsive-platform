@@ -121,8 +121,39 @@ only, no embed code). The public page shows Play demo / Watch video / View sourc
 buttons that open in a new tab, plus a fallback image and text, so the page still
 works if a demo is down.
 
+## Staff, partners and collaborations (Release 4)
+
+Logic: `src/lib/staff.ts` (who is staff), `src/lib/partners.ts` (everything
+else), `src/lib/company-import.ts` (reading a company page), `src/lib/fetch-page.ts`
+(safe fetching). Staff pages are under `src/app/staff/`, public ones under `src/app/partners/`.
+
+**1. Staff role (R4.01, R4.02).** A row in `staff_members` makes an account
+staff. You get it by entering the code in `STAFF_ACCESS_CODE` at `/staff` (5 wrong
+tries per 15 minutes). Every staff page and API calls `staffState()` /
+`requireStaffApi()` on the server, so a student calling `/api/staff/...` gets 403.
+
+**2. Requests, not self-service (R4.04 - R4.06, R4.20, R4.21).** Students only
+insert rows into `project_verification_requests` or `partner_requests`. Only
+staff code sets `projects.verified_at` or adds a row to `project_partners`
+(the official relationship). Rejections need a message the student sees.
+
+**3. Import = suggestions (R4.08 - R4.11).** The server fetches the page (public
+addresses only, 8 s, 1 MB, 3 redirects), strips every tag/script/style and
+pulls out name, description, website, domain, sector, keywords and location
+with fixed text rules. There is no field for status or permissions, so page
+text can't change them (R4.10, our chosen challenge). The form fills only empty
+boxes and shows the rest as "Website says: … Use this". Saving makes a draft.
+
+**4. Provenance (R4.12).** `companies.provenance` stores, per field, whether
+the value came from the website (with URL and time), was typed by staff, or
+was edited after an import. `company_imports` keeps every read, even failed ones.
+
+**5. Collaboration visibility (R4.18).** `toPublicCollaboration()` is the only
+way public pages and `/api/partners` see collaborations: Private returns
+nothing, Limited returns only year, status and `public_summary`.
+
 ## Tests
 
-`npm test` runs `tests/resume-and-email.test.mts` and `tests/repo.test.mts`: the four resume fixtures
+`npm test` runs `tests/resume-and-email.test.mts` `tests/repo.test.mts` and `tests/company-import.test.mts`: the four resume fixtures
 (including "no invented facts" and the untrusted-text fixture) and the email
 domain rule.

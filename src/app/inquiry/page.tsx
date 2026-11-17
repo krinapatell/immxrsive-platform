@@ -5,6 +5,8 @@ import InquiryForm from '@/components/InquiryForm';
 
 export const dynamic = 'force-dynamic';
 
+const LABEL = { student: 'student', project: 'project', company: 'industry partner', collaboration: 'collaboration' } as const;
+
 /**
  * Contextual employer inquiry (R1.18, R1.19). The student or project this is
  * about is looked up on the server and shown on the form, and is sent with
@@ -27,10 +29,10 @@ export default async function InquiryPage({
         ← Back to {source.source_name}
       </Link>
       <div className="rounded-2xl border border-line bg-white p-6 sm:p-8">
-        <h1 className="text-2xl font-extrabold">Company inquiry</h1>
+        <h1 className="text-2xl font-extrabold">{source.source_type === 'student' || source.source_type === 'project' ? 'Company inquiry' : 'Collaboration inquiry'}</h1>
         <p className="mt-2 rounded-lg bg-accent-soft p-3 text-sm">
-          You&apos;re asking about the {source.source_type === 'student' ? 'student' : 'project'}{' '}
-          <strong>{source.source_name}</strong> ({source.source_id}). This is included with your inquiry automatically.
+          You&apos;re asking about the {LABEL[source.source_type]} <strong>{source.source_name}</strong> ({source.source_id}). This is
+          included with your inquiry automatically.
         </p>
         <InquiryForm sourceType={source.source_type} sourceId={source.source_id} sourceName={source.source_name} />
       </div>

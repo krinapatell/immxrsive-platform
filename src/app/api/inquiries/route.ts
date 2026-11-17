@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   const source = await resolveInquirySource(String(body.source_type ?? ''), String(body.source_id ?? ''));
-  if (!source) return NextResponse.json({ error: 'That student or project could not be found.' }, { status: 404 });
+  if (!source) return NextResponse.json({ error: 'What you are asking about could not be found.' }, { status: 404 });
 
   const field = (key: string, max: number) => (typeof body[key] === 'string' ? (body[key] as string).trim().slice(0, max) : '');
   const form = {

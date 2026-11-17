@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPublicProject } from '@/lib/students';
 import FallbackImage from '@/components/FallbackImage';
+import { publicProjectInstitution } from '@/lib/partners';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ export default async function ProjectPage({ params }: Props) {
   const { id } = await params;
   const project = await getPublicProject(id);
   if (!project) notFound();
+  const institution = await publicProjectInstitution(project.id);
 
   const hasFallback = !!(project.fallback_image_url || project.fallback_text);
   const statusLabel = project.project_status === 'in-progress' ? 'In progress' : 'Completed';
@@ -46,6 +48,20 @@ export default async function ProjectPage({ params }: Props) {
             {[project.domain, statusLabel, project.project_date].filter(Boolean).join(' · ')}
           </p>
           <h1 className="break-words text-3xl font-extrabold">{project.title}</h1>
+          {(institution.verified_at || institution.partners.length > 0) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              {institution.verified_at && (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-900" title="Checked and verified by ImmXrsive staff">
+                  ✓ Verified by ImmXrsive
+                </span>
+              )}
+              {institution.partners.map((p) => (
+                <Link key={p.id} href={`/partners/${p.id}`} className="rounded-full bg-accent-soft px-3 py-1 font-semibold text-accent-dark underline">
+                  Industry partner: {p.name}
+                </Link>
+              ))}
+            </div>
+          )}
           {project.description && <p className="mt-2 max-w-2xl whitespace-pre-line break-words">{project.description}</p>}
         </header>
 

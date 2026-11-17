@@ -16,6 +16,7 @@ You will end up with these settings (environment variables) in Vercel:
 | `SESSION_SECRET` | Random text used to sign sign-in cookies (keep secret) | Step 4 |
 | `SITE_URL` | The site's public address, e.g. `https://immxrsive-platform.vercel.app` | Step 4 |
 | `ALLOWED_EMAIL_DOMAINS` | Approved student email domains, e.g. `algomau.ca` | Step 4 |
+| `STAFF_ACCESS_CODE` | Code that turns on staff tools for an account at `/staff` (keep secret, at least 12 characters) | Step 4 |
 
 Optional: `VERIFICATION_TTL_MINUTES` (default 15, never more than 30),
 `VERIFICATION_MAX_SENDS` (default 3 per 15 minutes), `VERIFICATION_MAX_ATTEMPTS` (default 5).
@@ -67,6 +68,8 @@ Brevo's free plan sends up to 300 emails a day to any address, with no domain se
 2. Go to **Settings → Environment Variables** and add every value from the table above.
    For `SESSION_SECRET`, use any random string of at least 32 characters
    (for example from a password manager's generator).
+   For `STAFF_ACCESS_CODE`, also use a random string of at least 12 characters. Give it
+   privately (never in GitHub or Moodle) to the people who should have staff tools.
 3. Make sure **Settings → Git** deploys the `main` branch.
 4. Redeploy (**Deployments → ⋯ → Redeploy**) so the new settings take effect.
 

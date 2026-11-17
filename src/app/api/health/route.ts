@@ -18,6 +18,7 @@ export async function GET() {
     ALLOWED_EMAIL_DOMAINS: config.allowedEmailDomains,
     email_provider: mail.brevoKey ? 'brevo' : mail.resendKey ? 'resend' : null,
     MAIL_FROM: !!mail.from,
+    STAFF_ACCESS_CODE_set: (process.env.STAFF_ACCESS_CODE ?? '').trim().length >= 12,
     supabase_project: config.supabaseUrl.replace(/^https:\/\//, '').split('.')[0] || null,
   };
 
@@ -37,6 +38,12 @@ export async function GET() {
   await check('app_users', 'user_id, github_id');
   await check('verification_challenges', 'id, code_hash');
   await check('inquiries', 'id, source_type');
+  await check('staff_members', 'user_id');
+  await check('companies', 'id, domain, provenance, status');
+  await check('collaborations', 'id, visibility, public_summary');
+  await check('partner_requests', 'id, status');
+  await check('project_verification_requests', 'id, status');
+  await check('project_partners', 'project_id, company_id');
 
   return NextResponse.json({ settings, database }, { headers: { 'Cache-Control': 'no-store' } });
 }
