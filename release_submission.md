@@ -40,15 +40,24 @@ Expected values are in `fixtures/r4/expected_company_imports.json`.
 
 ## Release-specific evidence
 
-- **Published fixture partner imported from a supplied page:** PARTNER_NORMAL_URL
+- **Published fixture partner imported from a supplied page:** https://immxrsive-platform.vercel.app/partners/C60512B
   (from company_normal.html).
 - **Company with at least two collaborations:** same partner. COL01 "Industrial
   Safety Training Prototype" (2025, Past, Public, P01) and COL02 "XR Maintenance
   Training Study" (2026, Current, Public, P04), from `collaboration_seed.json`.
-- **Visibility examples:** COL03 "Confidential Spatial Prototype" (Private) is on
-  Superior Immersive Labs, imported from company_prompt_injection.html; a Limited
-  collaboration is described in the release notes.
-- **Student-requested relationship, pending -> staff review:** PARTNER_REQUEST_EVIDENCE
+- **Visibility example:** COL03 "Confidential Spatial Prototype" (Private) is on
+  Superior Immersive Labs (imported from company_prompt_injection.html and left as
+  a draft for Scenario A). Public and Limited collaborations can be added from any
+  company page under **Add a collaboration** -> **Who can see it?**.
+- **Student-requested relationship, pending -> staff review:** project "ImmXrsive Talent Platform"
+  (https://immxrsive-platform.vercel.app/projects/P90C43945). Its maintainer
+  requested North Shore Simulations as a partner (pending), staff reviewed and
+  approved it, and the project and partner pages now show the relationship. A
+  second request (suggested company "Lakehead XR Studio") and a project
+  verification request on the same project are left pending for Scenario A.
+- **Items waiting on the staff home for Scenario A:** one project verification
+  request, one student partner request (Lakehead XR Studio), and two company
+  drafts (Superior Immersive Labs, Algoma Field Systems).
 - **Prompt-injection import (chosen challenge):** importing company_prompt_injection.html
   gives a draft with only ordinary fields; it was not verified, published or given
   any permission by the page text.
