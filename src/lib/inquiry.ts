@@ -1,9 +1,10 @@
 import 'server-only';
 import { db } from './db';
 import { getPublicProject, getPublicStudent } from './students';
+import { getPublicCollaboration, getPublicPartner } from './partners';
 
 export interface InquirySource {
-  source_type: 'student' | 'project';
+  source_type: 'student' | 'project' | 'company' | 'collaboration';
   source_id: string;
   source_name: string;
   source_url: string;
@@ -22,6 +23,17 @@ export async function resolveInquirySource(type: string, id: string): Promise<In
   if (type === 'project') {
     const p = await getPublicProject(id);
     return p ? { source_type: 'project', source_id: p.id, source_name: p.title, source_url: `/projects/${p.id}` } : null;
+  }
+  if (type === 'company') {
+    const c = await getPublicPartner(id);
+    return c ? { source_type: 'company', source_id: c.id, source_name: c.name, source_url: `/partners/${c.id}` } : null;
+  }
+  if (type === 'collaboration') {
+    // Only Public collaborations can be asked about by name (R4.18, R4.24).
+    const c = await getPublicCollaboration(id);
+    return c
+      ? { source_type: 'collaboration', source_id: c.id, source_name: `${c.title} (with ${c.partner.name})`, source_url: `/partners/${c.partner.id}` }
+      : null;
   }
   return null;
 }
