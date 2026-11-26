@@ -59,6 +59,9 @@ export default async function ManageProjectPage({
     video_url: project.video_url ?? '',
     fallback_image_url: project.fallback_image_url ?? '',
     fallback_text: project.fallback_text ?? '',
+    demo_type: project.demo_type ?? 'link',
+    demo_status: project.demo_status ?? 'available',
+    demo_note: project.demo_note ?? '',
   };
 
   const card = 'space-y-4 rounded-2xl border border-line bg-white p-5 sm:p-6';

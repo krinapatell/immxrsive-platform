@@ -19,8 +19,15 @@ import {
  * so one student can never change another student's profile (R2.30).
  */
 
+/**
+ * Columns the owner's editor receives. The old site's private email and claim
+ * flag (legacy_email, legacy_claimed) are kept for staff only (F.20).
+ */
+const OWNER_COLUMNS =
+  'id, user_id, name, headline, bio, program, status, profile_status, availability, skills, suggested_skills, links, location, education, experience, visibility, theme, section_order, avatar, avatar_url, created_at, updated_at, talent_state, availability_confirmed_at, legacy_id, merged_into';
+
 export async function getMyProfile(user: AppUser): Promise<StudentRow | null> {
-  const { data, error } = await db().from('students').select('*').eq('user_id', user.user_id).maybeSingle();
+  const { data, error } = await db().from('students').select(OWNER_COLUMNS).eq('user_id', user.user_id).maybeSingle();
   if (error) throw error;
   return (data as StudentRow) ?? null;
 }
@@ -42,7 +49,7 @@ export async function getOrCreateMyProfile(user: AppUser): Promise<StudentRow> {
       avatar_url: user.github_avatar_url,
       visibility: DEFAULT_VISIBILITY,
     })
-    .select('*')
+    .select(OWNER_COLUMNS)
     .single();
   if (error) throw error;
   return data as StudentRow;
@@ -78,6 +85,8 @@ export interface ProfileInput {
   program?: unknown;
   status?: unknown;
   availability?: unknown;
+  talent_state?: unknown;
+  confirm_availability?: unknown;
   skills?: unknown;
   suggested_skills?: unknown;
   links?: { linkedin?: unknown; portfolio?: unknown };
@@ -106,6 +115,8 @@ export async function saveMyProfile(user: AppUser, input: ProfileInput): Promise
   if (!headline) errors.headline = 'Enter a short professional headline.';
 
   const status = input.status === 'alumni' ? 'alumni' : 'current';
+  // Active Talent vs Showcase Only is separate from status and from publishing (F.11, F.13).
+  const talent_state = input.talent_state === 'showcase' ? 'showcase' : input.talent_state === 'active' ? 'active' : (current.talent_state ?? 'active');
 
   const availability = Array.isArray(input.availability)
     ? [...new Set(input.availability.map((a) => String(a).toLowerCase()))].filter((a) => (AVAILABILITY as readonly string[]).includes(a))
@@ -158,9 +169,18 @@ export async function saveMyProfile(user: AppUser, input: ProfileInput): Promise
 
   if (Object.keys(errors).length) return { ok: false, errors };
 
+  // Availability is (re)confirmed when the student says so, switches to Active
+  // Talent, or changes what they are looking for (F.14).
+  const sameAvailability = [...availability].sort().join() === [...(current.availability ?? [])].sort().join();
+  const confirmNow =
+    talent_state === 'active' && (input.confirm_availability === true || current.talent_state !== 'active' || !sameAvailability);
+  const availability_confirmed_at = confirmNow ? new Date().toISOString().slice(0, 10) : current.availability_confirmed_at;
+
   const { data, error } = await db()
     .from('students')
     .update({
+      talent_state,
+      availability_confirmed_at,
       name,
       headline,
       bio: text(input.bio, 2000),
@@ -181,7 +201,37 @@ export async function saveMyProfile(user: AppUser, input: ProfileInput): Promise
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', user.user_id) // ownership: only the signed-in student's row
-    .select('*')
+    .select(OWNER_COLUMNS)
+    .single();
+  if (error) throw error;
+  return { ok: true, profile: data as StudentRow };
+}
+
+/** Marks today's date as the last time availability was confirmed (F.14). */
+export async function confirmAvailability(user: AppUser): Promise<SaveResult> {
+  await getOrCreateMyProfile(user);
+  const { data, error } = await db()
+    .from('students')
+    .update({ availability_confirmed_at: new Date().toISOString().slice(0, 10), talent_state: 'active', updated_at: new Date().toISOString() })
+    .eq('user_id', user.user_id)
+    .select(OWNER_COLUMNS)
+    .single();
+  if (error) throw error;
+  return { ok: true, profile: data as StudentRow };
+}
+
+/**
+ * Retire (archive) the profile: hidden from the directory and its public page,
+ * but nothing is deleted. Shared projects and collaborations keep the
+ * student's role (F.15, F.16). Publishing again restores it.
+ */
+export async function retireProfile(user: AppUser): Promise<SaveResult> {
+  await getOrCreateMyProfile(user);
+  const { data, error } = await db()
+    .from('students')
+    .update({ profile_status: 'retired', updated_at: new Date().toISOString() })
+    .eq('user_id', user.user_id)
+    .select(OWNER_COLUMNS)
     .single();
   if (error) throw error;
   return { ok: true, profile: data as StudentRow };
@@ -197,7 +247,7 @@ export async function setPublished(user: AppUser, published: boolean): Promise<S
     .from('students')
     .update({ profile_status: published ? 'published' : 'unpublished', updated_at: new Date().toISOString() })
     .eq('user_id', user.user_id)
-    .select('*')
+    .select(OWNER_COLUMNS)
     .single();
   if (error) throw error;
   return { ok: true, profile: data as StudentRow };

@@ -1,65 +1,67 @@
-Chosen challenge: R4.10 - Untrusted Website Content
-
 # Release Submission
 
-Release: R4
+Release: FINAL
 Team: team-09
 Project Option: Project 1
 Deployment: https://immxrsive-platform.vercel.app
 Repository: https://github.com/krinapatell/immxrsive-platform
-Release tag: R4-submission
+Release tag: FINAL-submission
 Commit: COMMIT_SHA_GOES_HERE
 Adapter: evaluation_adapter.json
-Known issues: A company page with no "website" link gets the page address itself as its website until staff correct it. Re-importing shows the website's values as suggestions beside the current ones and never overwrites by itself, but there is no separate refresh-review queue (R4.13 not chosen). Same-domain companies get a warning but there is no merge tool (R4.14 not chosen). Staff tools work on phones but are designed for a laptop or tablet.
-Test notes: Release notes: docs/RELEASE-NOTES-R4.md. Fixture projects P01-P10 have no maintainer account; to test student requests use a project you create or maintain.
+Known issues: The fixture's legacy emails are @algoma.example, but verification only accepts @algomau.ca, so fixture profiles are claimed through staff review (automatic approval needs an exact verified-email match). Legacy collaborations have no year and show "Year not recorded". Merges cannot be undone from the website. A re-import never overwrites records that were claimed, merged or edited on the new site. Demo hosts that refuse framing show an empty frame when set to open inside the page; "Open demo in a new tab" is always beside it. No email notifications for claim decisions (shown on /student). Full list: docs/LAUNCH-NOTES.md.
+Test notes: Launch notes docs/LAUNCH-NOTES.md · migration instructions and result docs/MIGRATION.md · scale evidence docs/SCALE-TEST.md · regression checklist docs/REGRESSION-CHECKLIST.md · operations docs/OPERATIONS.md. Staff access details are in the Moodle Online text under "Reviewer test access", not in this repository.
 
 ## Test accounts
 
-- **Public visitor:** no account. Industry partners at `/partners`, talent directory at `/`.
-- **Student:** sign in at `/student` with your own GitHub account and verify your own
-  `@algomau.ca` email (a 6-digit code is emailed). No shared passwords.
-- **Staff:** use a verified account as above, open `/staff` and enter the **staff
-  access code**. The code is sent privately in the instructor's QA email thread
-  and is not in this repository. **Turn off staff tools** on `/staff` makes that
-  account an ordinary student again, so one person can test both roles; for
-  Scenario K, use a second account that never entered the code.
-- **Student partner request (Scenario I):** create a project at `/student/projects/new`
-  (you become its maintainer), then use **Industry partners** on its page.
-
-## Fixture source URLs (hosted unchanged)
-
-| Fixture | URL |
-|---|---|
-| company_normal.html | https://immxrsive-platform.vercel.app/fixtures/r4/company_normal.html |
-| company_sparse.html | https://immxrsive-platform.vercel.app/fixtures/r4/company_sparse.html |
-| company_prompt_injection.html | https://immxrsive-platform.vercel.app/fixtures/r4/company_prompt_injection.html |
-| company_same_name_other_domain.html | https://immxrsive-platform.vercel.app/fixtures/r4/company_same_name_other_domain.html |
-
-To repeat an import: `/staff` -> **+ Add a company** -> paste a URL above -> **Fill from website**.
-Expected values are in `fixtures/r4/expected_company_imports.json`.
+- **Public visitor / employer:** no account. Directory `/`, partners `/partners`.
+- **Student / contributor:** sign in at `/student` with your own GitHub account and
+  verify your own `@algomau.ca` email (a 6-digit code is emailed). No shared
+  passwords. Create a project at `/student/projects/new` to be its maintainer;
+  invite a second reviewer account to test the contributor journey.
+- **Staff:** use a verified account as above, open `/staff` and enter the staff
+  access code from the Moodle Online text ("Reviewer test access"). **Turn off
+  staff tools** on `/staff` makes the account an ordinary student again; for
+  authorization checks use an account that never entered the code.
+- **Do not claim a real person's profile.** Imported fixture profiles (LS03,
+  LS05, and the scale records SC001 – SC220) are synthetic and can be claimed for
+  testing; staff approve or reject at `/staff`.
 
 ## Release-specific evidence
 
-- **Published fixture partner imported from a supplied page:** https://immxrsive-platform.vercel.app/partners/C60512B
-  (from company_normal.html).
-- **Company with at least two collaborations:** same partner. COL01 "Industrial
-  Safety Training Prototype" (2025, Past, Public, P01) and COL02 "XR Maintenance
-  Training Study" (2026, Current, Public, P04), from `collaboration_seed.json`.
-- **Visibility example:** COL03 "Confidential Spatial Prototype" (Private) is on
-  Superior Immersive Labs (imported from company_prompt_injection.html and left as
-  a draft for Scenario A). Public and Limited collaborations can be added from any
-  company page under **Add a collaboration** -> **Who can see it?**.
-- **Student-requested relationship, pending -> staff review:** project "ImmXrsive Talent Platform"
-  (https://immxrsive-platform.vercel.app/projects/P90C43945). Its maintainer
-  requested North Shore Simulations as a partner (pending), staff reviewed and
-  approved it, and the project and partner pages now show the relationship. A
-  second request (suggested company "Lakehead XR Studio") and a project
-  verification request on the same project are left pending for Scenario A.
-- **Items waiting on the staff home for Scenario A:** one project verification
-  request, one student partner request (Lakehead XR Studio), and two company
-  drafts (Superior Immersive Labs, Algoma Field Systems).
-- **Prompt-injection import (chosen challenge):** importing company_prompt_injection.html
-  gives a draft with only ordinary fields; it was not verified, published or given
-  any permission by the page text.
-- **Decisions:** only staff create or change institutional records (verification,
-  companies, collaborations, official partners). Students only send requests.
+- **Migration tool:** `/staff/migrate` (staff). Instructions and the result for
+  `legacy_export.json`: `docs/MIGRATION.md`. The import was run twice on the
+  deployed site (second run: 0 new). Both runs and their downloadable reports
+  are listed under *Earlier runs*.
+- **Migration result:** 6 students, 3 projects, 3 companies, 4 collaborations;
+  duplicate LS04 → LS01 (same email); missing reference LP02 → LS99;
+  unclaimed LS02, LS05, LS06; also flagged LC02 → LC01 (same domain).
+- **Shared legacy project:** https://immxrsive-platform.vercel.app/projects/LP01
+- **Partner history (current + past, private hidden):** https://immxrsive-platform.vercel.app/partners/LC01 and /partners/LC03
+- **Stale availability:** https://immxrsive-platform.vercel.app/students/LS02 · **Showcase Only:** /students/LS05
+- **Retired contributor kept on a project:** https://immxrsive-platform.vercel.app/projects/LP03
+- **Duplicates for Scenario D:** LS04/LS01 and LC02/LC01 are left unmerged for
+  reviewers. Staff can make more with **Create a practice duplicate pair** on
+  `/staff/students` (each pair comes with a shared practice project for the
+  maintainer check).
+- **Claims for Scenario C:** claim LS03 or LS05 from its public page; it waits
+  for staff at `/staff` → *Profile claims*.
+- **Demos for Scenario I:** P01 (WebGL demo inside the page), P07 (broken build
+  inside the page), P06 (archived demo), set by `supabase/final-demo-examples.sql`.
+- **Scale fixture:** imported through the same staff page; evidence in
+  `docs/SCALE-TEST.md`.
+- **Regression checklist:** `docs/REGRESSION-CHECKLIST.md`.
+
+## Operational note (Final Release only)
+
+- **Deployment:** Vercel (auto-deploys `main`), Supabase Postgres. Schema:
+  `supabase/schema.sql` (safe to re-run; then `notify pgrst, 'reload schema'`).
+  Health check: `/api/health` (`final_release_ready: true`). Rollback: promote
+  the previous Vercel deployment.
+- **External dependencies:** GitHub OAuth (sign-in) and API (repository import),
+  Brevo (verification email), company websites (import), external demo hosts.
+  Each failure gives the user a plain message and a manual or fallback path; the
+  rest of the site keeps working.
+- **Diagnostics:** `/staff/diagnostics` (staff only) lists timestamped errors and
+  key actions with context; the same lines are in Vercel logs. Secret-looking
+  values are never logged. Settings are environment variables on Vercel; none
+  are in the repository or sent to the browser. Details: `docs/OPERATIONS.md`.

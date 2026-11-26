@@ -28,6 +28,7 @@ type Draft = {
   program: string;
   status: string;
   availability: string[];
+  talent_state: string;
   skills: string[];
   suggested_skills: string[];
   linkedin: string;
@@ -49,6 +50,7 @@ function fromRow(p: StudentRow): Draft {
     program: p.program ?? '',
     status: p.status ?? 'current',
     availability: p.availability ?? [],
+    talent_state: p.talent_state ?? 'active',
     skills: p.skills ?? [],
     suggested_skills: p.suggested_skills ?? [],
     linkedin: p.links?.linkedin ?? '',
@@ -67,10 +69,15 @@ const STATUS_TEXT: Record<string, string> = {
   draft: 'Draft — private, not in the directory',
   published: 'Published — visible in the public directory',
   unpublished: 'Unpublished — hidden from the directory (your profile is kept)',
+  retired: 'Retired — archived and hidden; nothing was deleted (publish again any time)',
 };
+
+const STALE_DAYS = 365;
 
 export default function ProfileEditor({ initial, standardSkills, githubLogin }: { initial: StudentRow; standardSkills: string[]; githubLogin: string }) {
   const router = useRouter();
+  // Read the clock once when the editor opens (rendering must stay pure).
+  const [now] = useState(() => Date.now());
   const [saved, setSaved] = useState<StudentRow>(initial);
   const [draft, setDraft] = useState<Draft>(fromRow(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -133,6 +140,19 @@ export default function ProfileEditor({ initial, standardSkills, githubLogin }: 
     }
   };
 
+  const onRetire = async () => {
+    if (dirty && !(await save())) return;
+    if (await put({ action: 'retire' })) {
+      setNotice('Your profile is retired: hidden from the directory, but kept. Shared projects still show your role. Publish again any time.');
+    }
+  };
+  const onConfirmAvailability = async () => {
+    if (dirty && !(await save())) return;
+    if (await put({ action: 'confirm_availability' })) setNotice('Thanks! Your availability is confirmed as current.');
+  };
+  const confirmedAt = saved.availability_confirmed_at;
+  const stale = !confirmedAt || now - new Date(`${confirmedAt}T12:00:00`).getTime() > STALE_DAYS * 86_400_000;
+
   const addSkill = () => {
     const value = newSkill.trim();
     if (!value) return;
@@ -184,6 +204,11 @@ export default function ProfileEditor({ initial, standardSkills, githubLogin }: 
           <button type="button" onClick={onPreview} disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-60">
             Preview
           </button>
+          {saved.profile_status !== 'retired' && saved.profile_status !== 'draft' && (
+            <button type="button" onClick={onRetire} disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-60">
+              Retire profile
+            </button>
+          )}
           {saved.profile_status === 'published' ? (
             <button type="button" onClick={() => onPublish(false)} disabled={busy} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
               Unpublish
@@ -227,6 +252,37 @@ export default function ProfileEditor({ initial, standardSkills, githubLogin }: 
           </div>
         </div>
         <Field id="location" label="Location (optional)" value={draft.location} onChange={(v) => set('location', v)} hint="e.g. Sault Ste. Marie, ON" maxLength={80} />
+        <fieldset className="min-w-0">
+          <legend className="text-sm font-semibold">Are you looking for opportunities?</legend>
+          <p className="text-xs text-muted">This is separate from being a student or alumni, and from publishing your profile.</p>
+          <div className="mt-2 space-y-2 text-sm">
+            <label className="flex items-start gap-2">
+              <input type="radio" name="talent" className="mt-1" checked={draft.talent_state === 'active'} onChange={() => set('talent_state', 'active')} />
+              <span>
+                <span className="font-semibold">Active Talent</span> – show employers I&apos;m available (the types I tick below)
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input type="radio" name="talent" className="mt-1" checked={draft.talent_state === 'showcase'} onChange={() => set('talent_state', 'showcase')} />
+              <span>
+                <span className="font-semibold">Showcase Only</span> – keep my portfolio public, but don&apos;t show me as looking
+              </span>
+            </label>
+          </div>
+          {saved.talent_state === 'active' && (
+            <div className={`mt-2 flex flex-wrap items-center gap-2 rounded-lg p-2 text-sm ${stale ? 'bg-amber-50' : 'bg-stone-50'}`}>
+              <span>
+                {confirmedAt
+                  ? `Availability last confirmed ${new Date(`${confirmedAt}T12:00:00`).toLocaleDateString('en-CA', { dateStyle: 'medium' })}.`
+                  : 'Availability not confirmed yet.'}
+                {stale && ' It is over a year old, so employers no longer see you as available.'}
+              </span>
+              <button type="button" onClick={onConfirmAvailability} disabled={busy} className="rounded border border-line bg-white px-2 py-1 text-xs font-semibold">
+                Confirm it&apos;s still current
+              </button>
+            </div>
+          )}
+        </fieldset>
         <fieldset>
           <legend className="text-sm font-semibold">Availability</legend>
           <div className="mt-2 flex flex-wrap gap-4">

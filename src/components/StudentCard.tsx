@@ -1,5 +1,6 @@
 ﻿import Link from 'next/link';
 import type { PublicStudent } from '@/lib/students';
+import TalentStatus from './TalentStatus';
 
 /** Directory card: name, headline, key skills, availability and project count (R1.11). */
 export default function StudentCard({ student }: { student: PublicStudent }) {
@@ -31,13 +32,7 @@ export default function StudentCard({ student }: { student: PublicStudent }) {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3 text-sm">
         <div className="text-muted">
-          {student.availability?.length ? (
-            <span>
-              Available: <span className="font-medium capitalize text-ink">{student.availability.join(', ')}</span>
-            </span>
-          ) : (
-            <span>Availability not shown</span>
-          )}
+          <TalentStatus student={student} compact />
           <span aria-hidden="true"> · </span>
           <span>
             {count} {count === 1 ? 'project' : 'projects'}

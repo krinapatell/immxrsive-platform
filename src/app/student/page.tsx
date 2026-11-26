@@ -2,6 +2,7 @@ import Link from 'next/link';
 ﻿import { currentUser, type AppUser } from '@/lib/users';
 import { getOrCreateMyProfile } from '@/lib/profile';
 import { listSkills } from '@/lib/students';
+import { myClaims } from '@/lib/admin';
 import VerifyEmail from '@/components/student/VerifyEmail';
 import ProfileEditor from '@/components/student/ProfileEditor';
 
@@ -87,7 +88,12 @@ export default async function StudentPortal({
     );
   }
 
-  const [profile, skills] = await Promise.all([getOrCreateMyProfile(user), listSkills()]);
+  const [profile, skills, claims] = await Promise.all([getOrCreateMyProfile(user), listSkills(), myClaims(user)]);
+  const CLAIM: Record<string, string> = {
+    pending: 'is waiting for ImmXrsive staff.',
+    approved: 'was approved. That profile is the one you are editing below.',
+    rejected: 'was not approved.',
+  };
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -99,6 +105,21 @@ export default async function StudentPortal({
           {signOut}
         </div>
       </div>
+      {claims.length > 0 && (
+        <section aria-labelledby="claims-h" className="rounded-2xl border border-line bg-white p-4 text-sm">
+          <h2 id="claims-h" className="font-bold">
+            Your profile claims
+          </h2>
+          <ul className="mt-1 space-y-1">
+            {claims.map((c) => (
+              <li key={c.id as string}>
+                Your claim for profile {c.student_id as string} {CLAIM[c.status as string]}
+                {c.status === 'rejected' && c.staff_note ? ` Staff said: “${c.staff_note as string}”` : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ProfileEditor initial={profile} standardSkills={skills} githubLogin={user.github_login} />
     </div>
   );

@@ -1,3 +1,4 @@
+import TalentStatus from './TalentStatus';
 import Link from 'next/link';
 import type { PublicStudent } from '@/lib/students';
 
@@ -77,14 +78,24 @@ export default function ProfileView({
 
   const links = student.links ?? {};
   return (
-    <article className={`theme-${student.theme} overflow-hidden rounded-2xl border border-line`} style={{ background: 'var(--profile-bg)', color: 'var(--profile-ink)' }}>
+    <article
+      className={`theme-${student.theme} overflow-hidden rounded-2xl border border-line`}
+      style={{ background: 'var(--profile-bg)', color: 'var(--profile-ink)' }}
+    >
       <div className={student.theme === 'minimal' ? 'p-6 sm:p-8' : 'p-6 sm:p-8 border-b border-black/10'}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           {student.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={student.avatar_url} alt="" width={72} height={72} className="h-18 w-18 rounded-full" />
+            <img src={student.avatar_url} alt="" width={72} height={72} loading="lazy" decoding="async" className="h-18 w-18 rounded-full" />
           ) : (
-            <div aria-hidden="true" className="flex h-18 w-18 items-center justify-center rounded-full text-2xl font-bold" style={{ background: 'var(--profile-chip)', color: 'var(--profile-accent)' }}>
+            <div
+              aria-hidden="true"
+              className="flex h-18 w-18 items-center justify-center rounded-full text-2xl font-bold"
+              style={{
+                background: 'var(--profile-chip)',
+                color: 'var(--profile-accent)',
+              }}
+            >
               {initials}
             </div>
           )}
@@ -104,59 +115,59 @@ export default function ProfileView({
 
       <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-3">
         <aside className="space-y-5 md:col-span-1">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--profile-muted)' }}>
-              Skills
-            </h2>
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {student.skills.map((s) => (
-                <li key={s} className="rounded-md px-2 py-1 text-sm" style={{ background: 'var(--profile-chip)' }}>
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {student.skills.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--profile-muted)' }}>
+                Skills
+              </h2>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {student.skills.map((s) => (
+                  <li key={s} className="rounded-md px-2 py-1 text-sm" style={{ background: 'var(--profile-chip)' }}>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--profile-muted)' }}>
               Availability
             </h2>
-            {student.availability ? (
-              <p className="mt-1 capitalize">{student.availability.join(', ') || 'Not specified'}</p>
-            ) : (
-              <p className="mt-1" style={{ color: 'var(--profile-muted)' }}>
-                {privateFields?.availability ? '🔒 Private — hidden from visitors' : 'Not shown'}
-              </p>
-            )}
+            <p className="mt-1">
+              <TalentStatus student={student} privateNote={privateFields?.availability ? '🔒 Private — hidden from visitors' : 'Not shown'} />
+            </p>
           </div>
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--profile-muted)' }}>
-              Links
-            </h2>
-            <ul className="mt-1 space-y-1">
-              {links.github && (
-                <li>
-                  <a href={links.github} rel="noopener noreferrer nofollow" target="_blank" className="underline">
-                    GitHub
-                  </a>
-                </li>
-              )}
-              {links.linkedin && (
-                <li>
-                  <a href={links.linkedin} rel="noopener noreferrer nofollow" target="_blank" className="underline">
-                    LinkedIn
-                  </a>
-                </li>
-              )}
-              {links.portfolio && (
-                <li>
-                  <a href={links.portfolio} rel="noopener noreferrer nofollow" target="_blank" className="underline">
-                    Portfolio
-                  </a>
-                </li>
-              )}
-              {privateFields?.links && <li style={{ color: 'var(--profile-muted)' }}>🔒 Other links are private</li>}
-            </ul>
-          </div>
+          {(links.github || links.linkedin || links.portfolio || privateFields?.links) && (
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--profile-muted)' }}>
+                Links
+              </h2>
+              <ul className="mt-1 space-y-1">
+                {links.github && (
+                  <li>
+                    <a href={links.github} rel="noopener noreferrer nofollow" target="_blank" className="underline">
+                      GitHub
+                    </a>
+                  </li>
+                )}
+                {links.linkedin && (
+                  <li>
+                    <a href={links.linkedin} rel="noopener noreferrer nofollow" target="_blank" className="underline">
+                      LinkedIn
+                    </a>
+                  </li>
+                )}
+                {links.portfolio && (
+                  <li>
+                    <a href={links.portfolio} rel="noopener noreferrer nofollow" target="_blank" className="underline">
+                      Portfolio
+                    </a>
+                  </li>
+                )}
+                {privateFields?.links && <li style={{ color: 'var(--profile-muted)' }}>🔒 Other links are private</li>}
+              </ul>
+            </div>
+          )}
           {privateFields?.location && <PrivateNote label="Location" />}
         </aside>
 

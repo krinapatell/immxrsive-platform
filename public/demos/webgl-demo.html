@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ImmXrsive WebGL Demo</title>
+<style>
+  html,body{margin:0;height:100%;background:#111;color:#eee;font-family:system-ui,sans-serif}
+  canvas{display:block;width:100%;height:100%}
+  #msg{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:1rem}
+  #hud{position:absolute;left:.75rem;bottom:.5rem;font-size:.85rem;opacity:.8}
+</style>
+<canvas id="c" aria-label="A spinning 3D cube"></canvas>
+<div id="msg" role="alert"><p>This demo needs WebGL, which this browser or device does not support.<br />Close the demo and use the preview on the project page instead.</p></div>
+<div id="hud">Drag or use arrow keys to spin · WebGL demo fixture</div>
+<script>
+(() => {
+  const c = document.getElementById('c');
+  const gl = c.getContext('webgl');
+  if (!gl) { document.getElementById('msg').style.display = 'grid'; return; }
+  const vs = `attribute vec3 p;attribute vec3 col;uniform mat4 m;varying vec3 v;void main(){v=col;gl_Position=m*vec4(p,1.0);}`;
+  const fs = `precision mediump float;varying vec3 v;void main(){gl_FragColor=vec4(v,1.0);}`;
+  const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
+  const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+  const P = [-1,-1,1, 1,-1,1, 1,1,1, -1,1,1, -1,-1,-1, 1,-1,-1, 1,1,-1, -1,1,-1];
+  const C = [1,.4,.2, 1,.8,.2, .2,.8,.4, .2,.5,1, .8,.2,1, 1,.2,.5, .3,1,1, 1,1,1];
+  const I = [0,1,2,0,2,3, 1,5,6,1,6,2, 5,4,7,5,7,6, 4,0,3,4,3,7, 3,2,6,3,6,7, 4,5,1,4,1,0];
+  const buf = (d, t, T) => { const b = gl.createBuffer(); gl.bindBuffer(t, b); gl.bufferData(t, new T(d), gl.STATIC_DRAW); return b; };
+  const at = (n, d) => { buf(d, gl.ARRAY_BUFFER, Float32Array); const l = gl.getAttribLocation(pr, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0); };
+  at('p', P); at('col', C); buf(I, gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
+  const um = gl.getUniformLocation(pr, 'm');
+  let ax = .5, ay = .6, drag = null;
+  addEventListener('pointerdown', e => drag = [e.clientX, e.clientY]);
+  addEventListener('pointerup', () => drag = null);
+  addEventListener('pointermove', e => { if (!drag) return; ay += (e.clientX - drag[0]) / 100; ax += (e.clientY - drag[1]) / 100; drag = [e.clientX, e.clientY]; });
+  addEventListener('keydown', e => { if (e.key === 'ArrowLeft') ay -= .2; if (e.key === 'ArrowRight') ay += .2; if (e.key === 'ArrowUp') ax -= .2; if (e.key === 'ArrowDown') ax += .2; });
+  gl.enable(gl.DEPTH_TEST);
+  const mul = (a, b) => { const o = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) o[j*4+i] += a[k*4+i] * b[j*4+k]; return o; };
+  const frame = () => {
+    c.width = c.clientWidth; c.height = c.clientHeight; gl.viewport(0, 0, c.width, c.height);
+    if (!drag) ay += .01;
+    const a = c.width / c.height, f = 1 / Math.tan(.5), n = .1, fa = 100;
+    const proj = [f/a,0,0,0, 0,f,0,0, 0,0,(fa+n)/(n-fa),-1, 0,0,2*fa*n/(n-fa),0];
+    const rx = [1,0,0,0, 0,Math.cos(ax),Math.sin(ax),0, 0,-Math.sin(ax),Math.cos(ax),0, 0,0,0,1];
+    const ry = [Math.cos(ay),0,-Math.sin(ay),0, 0,1,0,0, Math.sin(ay),0,Math.cos(ay),0, 0,0,0,1];
+    const tr = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-6,1];
+    gl.uniformMatrix4fv(um, false, new Float32Array(mul(proj, mul(tr, mul(rx, ry)))));
+    gl.clearColor(.07, .07, .09, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+</script>
+</html>

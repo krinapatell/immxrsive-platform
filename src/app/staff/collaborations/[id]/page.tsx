@@ -33,7 +33,7 @@ export default async function EditCollaborationPage({ params }: { params: Promis
           projects={projects}
           initial={{
             title: c.title,
-            year_start: String(c.year_start),
+            year_start: c.year_start == null ? '' : String(c.year_start),
             year_end: c.year_end ? String(c.year_end) : '',
             status: c.status,
             visibility: c.visibility,

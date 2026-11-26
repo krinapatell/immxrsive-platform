@@ -31,9 +31,9 @@ export async function GET() {
       database[table] = `ERROR ${err instanceof Error ? err.message : 'unknown'}`;
     }
   };
-  await check('students', 'id, profile_status, section_order, user_id');
+  await check('students', 'id, profile_status, section_order, user_id, talent_state, availability_confirmed_at, legacy_id, merged_into');
   await check('skills', 'name');
-  await check('projects', 'id, domain');
+  await check('projects', 'id, domain, legacy_id, demo_type, demo_status');
   await check('project_contributors', 'project_id, role');
   await check('app_users', 'user_id, github_id');
   await check('verification_challenges', 'id, code_hash');
@@ -44,6 +44,10 @@ export async function GET() {
   await check('partner_requests', 'id, status');
   await check('project_verification_requests', 'id, status');
   await check('project_partners', 'project_id, company_id');
+  await check('profile_claims', 'id, status');
+  await check('migration_runs', 'id, kind');
+  await check('app_events', 'id, level');
+  database.final_release_ready = Object.values(database).every((v) => typeof v === 'string' && v.startsWith('ok'));
 
   return NextResponse.json({ settings, database }, { headers: { 'Cache-Control': 'no-store' } });
 }

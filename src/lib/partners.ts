@@ -1,4 +1,5 @@
 import 'server-only';
+import { logEvent } from './events';
 import { randomBytes } from 'node:crypto';
 import { db } from './db';
 import { cleanUrl, getOrCreateMyProfile, text } from './profile';
@@ -57,7 +58,7 @@ export interface CollaborationRow {
   id: string;
   company_id: string;
   title: string;
-  year_start: number;
+  year_start: number | null; // null only for migrated history with no recorded year
   year_end: number | null;
   description: string;
   outcome: string;
@@ -110,7 +111,7 @@ export async function workQueue(): Promise<WorkQueue> {
   const [v, p, c, col] = await Promise.all([
     db().from('project_verification_requests').select('*').eq('status', 'pending').order('created_at'),
     db().from('partner_requests').select('*').eq('status', 'pending').order('created_at'),
-    db().from('companies').select('id, name, domain, status, provenance, updated_at').order('updated_at', { ascending: false }),
+    db().from('companies').select('id, name, domain, status, provenance, updated_at').is('merged_into', null).order('updated_at', { ascending: false }),
     db().from('collaborations').select('company_id'),
   ]);
   for (const r of [v, p, c, col]) if (r.error) throw r.error;
@@ -290,7 +291,7 @@ export async function importCompany(staff: AppUser, urlInput: unknown, companyId
     candidates = parseCompanyHtml(page.html, page.finalUrl);
   } catch (err) {
     failure = err instanceof FetchPageError ? err.message : 'We couldn’t read that website. You can fill in the details by hand.';
-    if (!(err instanceof FetchPageError)) console.error('Import failed:', err instanceof Error ? err.message : err);
+    void logEvent(err instanceof FetchPageError ? 'warn' : 'error', 'company-import', failure, { url, reason: err instanceof Error ? err.message : String(err) });
   }
   const { data, error } = await db()
     .from('company_imports')
@@ -414,7 +415,7 @@ export async function companyAdmin(id: string) {
   const company = await one<CompanyRow>('companies', id, 'Company');
   const [imports, collabs, partners] = await Promise.all([
     db().from('company_imports').select('id, source_url, ok, error, fetched_at').eq('company_id', id).order('fetched_at', { ascending: false }),
-    db().from('collaborations').select('*').eq('company_id', id).order('year_start', { ascending: false }),
+    db().from('collaborations').select('*').eq('company_id', id).order('year_start', { ascending: false, nullsFirst: false }),
     db().from('project_partners').select('project_id, approved_at').eq('company_id', id),
   ]);
   for (const r of [imports, collabs, partners]) if (r.error) throw r.error;
@@ -429,7 +430,7 @@ export async function companyAdmin(id: string) {
 }
 
 export async function listCompaniesForPicker(publishedOnly: boolean) {
-  let q = db().from('companies').select('id, name, domain, status').order('name');
+  let q = db().from('companies').select('id, name, domain, status').is('merged_into', null).order('name');
   if (publishedOnly) q = q.eq('status', 'published');
   const { data, error } = await q;
   if (error) throw error;
@@ -482,9 +483,11 @@ async function validateCollaboration(input: CollaborationInput) {
   const errors: Record<string, string> = {};
   const title = text(input.title, 140);
   if (!title) errors.title = 'Give the collaboration a short title.';
-  const start = year(input.year_start);
+  // The start year may be left empty only for old (migrated) history where it was never recorded.
+  const startRaw = String(input.year_start ?? '').trim();
+  const start = startRaw ? year(startRaw) : null;
   const thisYear = new Date().getFullYear();
-  if (!start || start < 1990 || start > thisYear + 2) errors.year_start = 'Enter the year it started, for example 2025.';
+  if (startRaw && (!start || start < 1990 || start > thisYear + 2)) errors.year_start = 'Enter the year it started, for example 2025, or leave it empty if it is not known.';
   const endRaw = String(input.year_end ?? '').trim();
   const end = endRaw ? year(endRaw) : null;
   if (endRaw && (!end || (start && end < start) || end > thisYear + 5)) errors.year_end = 'The end year must be the same as or after the start year.';
@@ -510,7 +513,7 @@ async function validateCollaboration(input: CollaborationInput) {
   }
   if (Object.keys(errors).length) bad('Please fix the highlighted fields.', errors);
   return {
-    row: { title, year_start: start!, year_end: end, description, outcome, status: status!, visibility: visibility!, public_summary },
+    row: { title, year_start: start, year_end: end, description, outcome, status: status!, visibility: visibility!, public_summary },
     projectIds,
     studentIds,
   };
@@ -749,7 +752,7 @@ export async function removeProjectPartner(staff: AppUser, projectId: string, co
 export interface PublicCollaboration {
   id: string;
   kind: 'public' | 'limited';
-  year_start: number;
+  year_start: number | null; // null only for migrated history with no recorded year
   year_end: number | null;
   status: 'current' | 'past';
   /** public only */
@@ -808,7 +811,7 @@ async function publicCompanies(id?: string): Promise<PublicPartner[]> {
     .select('*')
     .in('company_id', ids)
     .neq('visibility', 'private')
-    .order('year_start', { ascending: false });
+    .order('year_start', { ascending: false, nullsFirst: false });
   if (cErr) throw cErr;
   const linked = await withLinks((collabs ?? []) as CollaborationRow[]);
   const { data: pp } = await db().from('project_partners').select('project_id, company_id').in('company_id', ids);
@@ -818,7 +821,7 @@ async function publicCompanies(id?: string): Promise<PublicPartner[]> {
       .filter((x) => x.company_id === c.id)
       .map(toPublicCollaboration)
       .filter((x): x is PublicCollaboration => !!x)
-      .sort((a, b) => Number(b.status === 'current') - Number(a.status === 'current') || b.year_start - a.year_start);
+      .sort((a, b) => Number(b.status === 'current') - Number(a.status === 'current') || (b.year_start ?? 0) - (a.year_start ?? 0));
     const projectMap = new Map<string, string>();
     for (const p of pp ?? []) {
       const t = titles.get(p.project_id as string);

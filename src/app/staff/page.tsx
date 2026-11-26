@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { staffState } from '@/lib/staff';
 import { workQueue } from '@/lib/partners';
+import { duplicateHints, pendingClaims } from '@/lib/admin';
 import StaffGate from '@/components/staff/StaffGate';
 import StaffButton from '@/components/staff/StaffButton';
 
@@ -15,9 +16,9 @@ const when = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { month:
 export default async function StaffHome({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { state } = await staffState();
   if (state !== 'staff') return <StaffGate state={state} />;
-  const q = await workQueue();
+  const [q, claims, dupes] = await Promise.all([workQueue(), pendingClaims(), duplicateHints()]);
   const done = (await searchParams).done;
-  const total = q.verifications.length + q.partnerRequests.length + q.draftCompanies.length;
+  const total = q.verifications.length + q.partnerRequests.length + q.draftCompanies.length + claims.length + dupes.students.length + dupes.companies.length;
   const card = 'rounded-2xl border border-line bg-white p-5 sm:p-6';
   const item = 'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3';
   const open = 'rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-dark';
@@ -36,10 +37,75 @@ export default async function StaffHome({ searchParams }: { searchParams: Promis
           <StaffButton url="/api/staff/access" method="DELETE" label="Turn off staff tools" confirm="This account goes back to being an ordinary student." redirectTo="/student" />
         </div>
       </div>
+      <nav aria-label="Staff tools" className="flex flex-wrap gap-2 text-sm">
+        {[
+          ['/staff/students', 'Student profiles'],
+          ['/staff/projects', 'Projects'],
+          ['/staff/migrate', 'Import from the old site'],
+          ['/staff/diagnostics', 'Diagnostics'],
+        ].map(([href, label]) => (
+          <Link key={href} href={href} className="rounded-lg border border-line bg-white px-3 py-1.5 font-semibold hover:bg-stone-50">
+            {label}
+          </Link>
+        ))}
+      </nav>
       {done && (
         <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm font-medium">
           {done === 'approve' ? 'Approved. The student can see your decision.' : 'Rejected. The student can see your message.'}
         </p>
+      )}
+
+      <section className={card} aria-labelledby="q-claims">
+        <h2 id="q-claims" className="text-lg font-bold">
+          Profile claims <span className="text-muted">({claims.length})</span>
+        </h2>
+        <p className="text-sm text-muted">Students saying a profile moved from the old site is theirs. Matching verified emails are approved automatically and never show here.</p>
+        {claims.length === 0 ? (
+          <p className="mt-2 text-sm">No claims waiting.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {claims.map((c) => (
+              <li key={c.id} className={item}>
+                <span>
+                  <span className="font-semibold">{c.student_name}</span>
+                  <span className="block text-sm text-muted">
+                    claimed by GitHub {c.github_login} · {when(c.created_at)}
+                  </span>
+                </span>
+                <Link href={`/staff/claims/${c.id}`} className={open}>
+                  Review claim
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {(dupes.students.length > 0 || dupes.companies.length > 0) && (
+        <section className={card} aria-labelledby="q-dupes">
+          <h2 id="q-dupes" className="text-lg font-bold">
+            Possible duplicates <span className="text-muted">({dupes.students.length + dupes.companies.length})</span>
+          </h2>
+          <p className="text-sm text-muted">Records that share an email or website. They are never merged automatically: open one and merge it if they are the same.</p>
+          <ul className="mt-3 space-y-2">
+            {dupes.students.map((g) => (
+              <li key={g.map((x) => x.id).join()} className={item}>
+                <span>Students: {g.map((x) => `${x.name} (${x.id})`).join(' and ')}</span>
+                <Link href={`/staff/students/${encodeURIComponent(g[g.length - 1].id)}`} className={open}>
+                  Review
+                </Link>
+              </li>
+            ))}
+            {dupes.companies.map((g) => (
+              <li key={g.map((x) => x.id).join()} className={item}>
+                <span>Companies: {g.map((x) => `${x.name} (${x.id})`).join(' and ')}</span>
+                <Link href={`/staff/companies/${encodeURIComponent(g[g.length - 1].id)}#merge`} className={open}>
+                  Review
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className={card} aria-labelledby="q-verify">

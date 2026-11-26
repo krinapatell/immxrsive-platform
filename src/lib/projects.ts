@@ -1,4 +1,5 @@
 import 'server-only';
+import { logEvent } from './events';
 import { randomBytes } from 'node:crypto';
 import { db } from './db';
 import { config } from './config';
@@ -53,6 +54,9 @@ export interface ProjectRow {
   video_url: string;
   fallback_image_url: string;
   fallback_text: string;
+  demo_type: 'link' | 'embed';
+  demo_status: 'available' | 'unavailable' | 'archived' | 'replaced';
+  demo_note: string;
   version: number;
   updated_at: string;
 }
@@ -154,6 +158,9 @@ export interface SharedInput {
   video_url?: unknown;
   fallback_image_url?: unknown;
   fallback_text?: unknown;
+  demo_type?: unknown;
+  demo_status?: unknown;
+  demo_note?: unknown;
 }
 
 type SharedFields = Pick<
@@ -170,6 +177,9 @@ type SharedFields = Pick<
   | 'video_url'
   | 'fallback_image_url'
   | 'fallback_text'
+  | 'demo_type'
+  | 'demo_status'
+  | 'demo_note'
 >;
 
 /** Checks every shared field; returns clean values or field-level errors (R3.02, R3.19). */
@@ -204,6 +214,11 @@ export function validateShared(input: SharedInput): { ok: true; fields: SharedFi
   const video_url = url('video_url', 'Video link');
   const fallback_image_url = url('fallback_image_url', 'Fallback image link');
 
+  const demo_type = input.demo_type === 'embed' ? 'embed' : 'link';
+  const demoStatuses = ['available', 'unavailable', 'archived', 'replaced'] as const;
+  const demo_status = demoStatuses.find((d) => d === (input.demo_status ?? 'available'));
+  if (!demo_status) errors.demo_status = 'Choose whether the demo is working.';
+
   const status = String(input.project_status ?? 'completed');
   if (!(PROJECT_STATUSES as readonly string[]).includes(status)) errors.project_status = 'Choose a status.';
 
@@ -223,6 +238,9 @@ export function validateShared(input: SharedInput): { ok: true; fields: SharedFi
       video_url,
       fallback_image_url,
       fallback_text: text(input.fallback_text, 300),
+      demo_type,
+      demo_status: demo_status ?? 'available',
+      demo_note: text(input.demo_note, 300),
     },
   };
 }
@@ -357,7 +375,7 @@ export async function updateShared(user: AppUser, projectId: string, input: Shar
   if (!Number.isInteger(version)) throw new ProjectError(400, 'Missing version. Reload the page and try again.');
 
   // Fields left out of the request keep their current values (a partial save never blanks them).
-  const keys: (keyof SharedInput)[] = ['title', 'description', 'domain', 'technologies', 'project_status', 'project_date', 'repositories', 'demo_url', 'video_url', 'fallback_image_url', 'fallback_text'];
+  const keys: (keyof SharedInput)[] = ['title', 'description', 'domain', 'technologies', 'project_status', 'project_date', 'repositories', 'demo_url', 'video_url', 'fallback_image_url', 'fallback_text', 'demo_type', 'demo_status', 'demo_note'];
   const merged: SharedInput = {};
   for (const k of keys) merged[k] = input[k] !== undefined ? input[k] : (project as unknown as Record<string, unknown>)[k];
   const v = validateShared(merged);
@@ -586,6 +604,7 @@ export async function importFromGithub(input: unknown): Promise<ImportSuggestion
   const base = `https://api.github.com/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
   const res = await fetch(base, { headers, cache: 'no-store' });
   if (res.status === 404) throw new ProjectError(404, "We couldn't find that repository. Check the name, and make sure it's public.");
+  if (!res.ok) void logEvent('warn', 'github-import', `GitHub answered ${res.status}`, { repository: `${parsed.owner}/${parsed.repo}` });
   if (res.status === 403 || res.status === 429) throw new ProjectError(503, 'GitHub is limiting requests right now. Try again in a few minutes, or fill the fields by hand.');
   if (!res.ok) throw new ProjectError(502, "GitHub didn't respond. Try again, or fill the fields by hand.");
   const repo = await res.json();

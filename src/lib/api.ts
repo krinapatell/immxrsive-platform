@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { ProjectError } from './projects';
 import { currentUser, type AppUser } from './users';
+import { logEvent } from './events';
 
 /** Signed-in user or a 401 response. */
 export async function requireUser(): Promise<{ user: AppUser; error: null } | { user: null; error: NextResponse }> {
@@ -20,8 +21,11 @@ export async function readJson(request: Request): Promise<Record<string, unknown
 }
 
 /** Turns known errors into clear JSON responses; logs anything unexpected. */
-export function errorResponse(err: unknown): NextResponse {
+export function errorResponse(err: unknown, area = 'api'): NextResponse {
   if (err instanceof ProjectError) return NextResponse.json({ error: err.message, ...err.extra }, { status: err.status });
-  console.error('Unexpected error:', err instanceof Error ? err.message : err);
+  void logEvent('error', area, err instanceof Error ? err.message : 'Unexpected error', {
+    kind: err instanceof Error ? err.name : typeof err,
+    stack: err instanceof Error ? (err.stack ?? '').split('\n').slice(0, 4).join(' | ') : undefined,
+  });
   return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
 }
