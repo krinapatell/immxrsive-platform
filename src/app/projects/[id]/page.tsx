@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getPublicProject } from '@/lib/students';
 import FallbackImage from '@/components/FallbackImage';
+import DemoLauncher from '@/components/DemoLauncher';
 import { publicProjectInstitution } from '@/lib/partners';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,10 @@ function host(url: string): string {
 
 /**
  * Canonical public project page (R1.17, R3.05, R3.15, R3.18 – R3.23, R3.26).
- * Demos are LINKS that open in a new tab; nothing a student types is embedded
- * as HTML or script (R3.19), so a broken demo can't break this page (R3.22).
+ * Demos start only when the visitor presses Play (F.33): either a new tab, or a
+ * sandboxed frame with no permissions (F.34, F.35). Nothing a student types is
+ * embedded as HTML or script (R3.19), so a broken demo can't break this page.
+ * A demo marked unavailable or archived shows its note and the preview instead (F.36, F.37).
  */
 export default async function ProjectPage({ params }: Props) {
   const { id } = await params;
@@ -35,6 +38,9 @@ export default async function ProjectPage({ params }: Props) {
   const institution = await publicProjectInstitution(project.id);
 
   const hasFallback = !!(project.fallback_image_url || project.fallback_text);
+  const demoWorks = !!project.demo_url && (project.demo_status === 'available' || project.demo_status === 'replaced');
+  const demoGone = !!project.demo_url && !demoWorks;
+  const DEMO_LABEL = { unavailable: 'The live demo is not working right now.', archived: 'The live demo has been archived and is no longer online.' } as const;
   const statusLabel = project.project_status === 'in-progress' ? 'In progress' : 'Completed';
 
   return (
@@ -71,16 +77,7 @@ export default async function ProjectPage({ params }: Props) {
               See it in action
             </h2>
             <div className="flex flex-wrap gap-3">
-              {project.demo_url && (
-                <a
-                  href={project.demo_url}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="rounded-lg bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-dark"
-                >
-                  ▶ Play demo <span className="sr-only">(opens in a new tab)</span>
-                </a>
-              )}
+              {demoWorks && <DemoLauncher url={project.demo_url} title={project.title} embed={project.demo_type === 'embed'} />}
               {project.video_url && (
                 <a href={project.video_url} target="_blank" rel="noopener noreferrer nofollow" className="rounded-lg border border-line px-5 py-3 font-semibold">
                   Watch video <span className="sr-only">(opens in a new tab)</span>
@@ -92,9 +89,16 @@ export default async function ProjectPage({ params }: Props) {
                 </a>
               ))}
             </div>
-            {project.demo_url && (
+            {demoWorks && (
               <p className="text-sm text-muted">
-                The demo opens on another site and may not work on every device or browser{hasFallback ? '. If it doesn’t load, see the preview below.' : '.'}
+                {project.demo_status === 'replaced' && project.demo_note ? `${project.demo_note} ` : ''}
+                The demo is hosted on another site and may not work on every device or browser{hasFallback ? '. If it doesn’t load, see the preview below.' : '.'}
+              </p>
+            )}
+            {demoGone && (
+              <p role="note" className="rounded-lg bg-amber-50 p-3 text-sm">
+                {DEMO_LABEL[project.demo_status as 'unavailable' | 'archived']} {project.demo_note}
+                {hasFallback ? ' The preview below shows what it looked like.' : ''}
               </p>
             )}
           </section>
@@ -126,7 +130,7 @@ export default async function ProjectPage({ params }: Props) {
                         {c.name}
                       </Link>
                     ) : (
-                      <span className="text-muted">A contributor without a public profile</span>
+                      <span className="text-muted">{c.former ? 'A former contributor' : 'A contributor without a public profile'}</span>
                     )}{' '}
                     — <span className="font-medium">{c.role}</span>
                     {c.is_maintainer && <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold">Maintainer</span>}

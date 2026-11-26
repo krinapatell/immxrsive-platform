@@ -17,6 +17,9 @@ export interface ProjectFormValues {
   video_url: string;
   fallback_image_url: string;
   fallback_text: string;
+  demo_type: 'link' | 'embed';
+  demo_status: 'available' | 'unavailable' | 'archived' | 'replaced';
+  demo_note: string;
 }
 
 export const EMPTY_PROJECT: ProjectFormValues = {
@@ -31,6 +34,9 @@ export const EMPTY_PROJECT: ProjectFormValues = {
   video_url: '',
   fallback_image_url: '',
   fallback_text: '',
+  demo_type: 'link',
+  demo_status: 'available',
+  demo_note: '',
 };
 
 type Dup = { sameRepository: { id: string; title: string; published: boolean }[]; similarTitle: { id: string; title: string; domain: string }[] };
@@ -367,6 +373,42 @@ export default function ProjectForm({
           </button>
         </fieldset>
         <Field id="demo_url" label="Playable demo link" value={v.demo_url} onChange={(x) => set('demo_url', x)} error={errors.demo_url} hint="A web page people can open and use. Links only, no embed code." />
+        {v.demo_url.trim() && (
+          <>
+            <fieldset>
+              <legend className="font-semibold">How should the demo open?</legend>
+              <p className="text-sm text-muted">Visitors always press Play first; nothing starts on its own.</p>
+              {(
+                [
+                  ['link', 'In a new tab (works for every demo, including VR/AR)'],
+                  ['embed', 'Inside the project page, in a protected frame (no camera, microphone or headset access)'],
+                ] as const
+              ).map(([val, label]) => (
+                <label key={val} className="mt-1 flex items-start gap-2">
+                  <input type="radio" name="demo_type" value={val} checked={v.demo_type === val} onChange={() => set('demo_type', val)} className="mt-1" />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+            <div>
+              <label htmlFor="demo_status" className="block font-semibold">
+                Is the demo working?
+              </label>
+              <select
+                id="demo_status"
+                value={v.demo_status}
+                onChange={(e) => set('demo_status', e.target.value as ProjectFormValues['demo_status'])}
+                className="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2"
+              >
+                <option value="available">Yes, it works</option>
+                <option value="unavailable">Not right now (hide Play and show the preview)</option>
+                <option value="archived">Archived: it is no longer online</option>
+                <option value="replaced">Replaced by a newer version</option>
+              </select>
+            </div>
+            <Field id="demo_note" label="Note about the demo (optional)" value={v.demo_note} onChange={(x) => set('demo_note', x)} maxLength={300} hint="For example: “Server is down for maintenance” or “Version 2 replaced the 2024 build.”" />
+          </>
+        )}
         <Field id="video_url" label="Video link" value={v.video_url} onChange={(x) => set('video_url', x)} error={errors.video_url} />
         <Field id="fallback_image_url" label="Preview image link" value={v.fallback_image_url} onChange={(x) => set('fallback_image_url', x)} error={errors.fallback_image_url} hint="Shown so the project still makes sense if the demo doesn't load." />
         <Field id="fallback_text" label="Preview description" multiline value={v.fallback_text} onChange={(x) => set('fallback_text', x)} maxLength={300} hint="What the demo shows, in a sentence or two." />
