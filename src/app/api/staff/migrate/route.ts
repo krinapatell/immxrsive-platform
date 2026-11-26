@@ -36,6 +36,15 @@ export async function POST(request: Request) {
     const result = await runMigration(auth.user, data, source, body.dry_run !== false);
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
-    return errorResponse(err, 'migration');
+    // Staff see the database's reason (no secrets in it) and how to recover; details go to diagnostics.
+    const reason = err && typeof err === 'object' && 'message' in err && !(err instanceof Error) ? String((err as { message: unknown }).message).slice(0, 200) : '';
+    const res = errorResponse(err, 'migration');
+    if (!reason) return res;
+    return NextResponse.json(
+      {
+        error: `The import stopped: ${reason}. Fix the cause and run it again; anything already imported is matched by its old id and is not copied twice. Details are in Staff › Diagnostics.`,
+      },
+      { status: 500 },
+    );
   }
 }

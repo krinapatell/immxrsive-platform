@@ -408,7 +408,19 @@ alter table public.project_partners              enable row level security;
 -- =====================================================================
 
 -- Profile lifecycle (F.15): draft, published, unpublished, retired.
-alter table public.students drop constraint if exists students_profile_status_check;
+-- A database rebuilt in Release 3 can also have an older copy of this rule
+-- (students_profile_status_check1) that blocks 'retired'; drop every copy first.
+do $$
+declare r record;
+begin
+  for r in
+    select conname from pg_constraint
+    where conrelid = 'public.students'::regclass and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%profile_status%'
+  loop
+    execute format('alter table public.students drop constraint %I', r.conname);
+  end loop;
+end $$;
 alter table public.students add constraint students_profile_status_check
   check (profile_status in ('draft','published','unpublished','retired'));
 
