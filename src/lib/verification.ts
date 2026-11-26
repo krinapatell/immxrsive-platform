@@ -1,4 +1,5 @@
 import 'server-only';
+import { logEvent } from './events';
 import { randomInt } from 'node:crypto';
 import { config, isApprovedEmail } from './config';
 import { db } from './db';
@@ -63,7 +64,7 @@ export async function requestCode(userId: string, rawEmail: string): Promise<Res
     if (err instanceof MailNotConfiguredError) {
       return { ok: false, status: 503, message: 'Email sending is not set up on this deployment yet. Please contact the team.' };
     }
-    console.error('Verification email failed:', err instanceof Error ? err.message : err);
+    void logEvent('error', 'email-verification', 'Verification email could not be sent', { reason: err instanceof Error ? err.message : String(err), user_id: userId });
     return { ok: false, status: 502, message: 'We could not send the email. Please try again in a minute.' };
   }
 

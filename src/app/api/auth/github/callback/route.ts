@@ -1,3 +1,4 @@
+import { logEvent } from '@/lib/events';
 import { NextResponse, type NextRequest } from 'next/server';
 import { config } from '@/lib/config';
 import { safeEqual, startSession } from '@/lib/session';
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     const user = await upsertGithubUser({ id: gh.id, login: String(gh.login ?? ''), avatar_url: String(gh.avatar_url ?? '') });
     await startSession(user.user_id);
   } catch (err) {
-    console.error('GitHub sign-in failed:', err instanceof Error ? err.message : err);
+    void logEvent('error', 'github-signin', 'GitHub sign-in failed', { reason: err instanceof Error ? err.message : String(err) });
     return fail('signin_failed');
   }
 

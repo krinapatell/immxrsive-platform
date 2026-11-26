@@ -1,3 +1,4 @@
+import { logEvent } from '@/lib/events';
 import { NextResponse } from 'next/server';
 import { currentUser } from '@/lib/users';
 import { confirmCode, requestCode } from '@/lib/verification';
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     if (!result.ok) return NextResponse.json({ error: result.message }, { status: result.status });
     return NextResponse.json({ ok: true, message: result.message });
   } catch (err) {
-    console.error('Verification error:', err instanceof Error ? err.message : err);
+    void logEvent('error', 'email-verification', 'Verification request failed', { reason: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 }

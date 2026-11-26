@@ -1,3 +1,4 @@
+import { logEvent } from '@/lib/events';
 import { NextResponse } from 'next/server';
 import { currentUser } from '@/lib/users';
 import { listSkills } from '@/lib/students';
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
   try {
     text = await pdfToText(bytes);
   } catch (err) {
-    console.error('Resume read failed:', err instanceof Error ? err.message : err);
+    void logEvent('error', 'resume-import', 'Resume could not be read', { reason: err instanceof Error ? err.message : String(err) });
     return NextResponse.json(
       { error: "We couldn't read this PDF. Your profile hasn't changed — you can keep editing it by hand." },
       { status: 422 },

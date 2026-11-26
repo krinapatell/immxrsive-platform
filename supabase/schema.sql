@@ -400,3 +400,97 @@ alter table public.collaboration_projects        enable row level security;
 alter table public.collaboration_students        enable row level security;
 alter table public.partner_requests              enable row level security;
 alter table public.project_partners              enable row level security;
+
+-- =====================================================================
+-- Final release: legacy migration, profile claims, alumni/availability,
+-- retirement, duplicate merge, demo status and diagnostics.
+-- Safe to run more than once.
+-- =====================================================================
+
+-- Profile lifecycle (F.15): draft, published, unpublished, retired.
+alter table public.students drop constraint if exists students_profile_status_check;
+alter table public.students add constraint students_profile_status_check
+  check (profile_status in ('draft','published','unpublished','retired'));
+
+-- Active Talent vs Showcase Only (F.13) and last-confirmed availability (F.14).
+alter table public.students add column if not exists talent_state text not null default 'active';
+alter table public.students drop constraint if exists students_talent_state_check;
+alter table public.students add constraint students_talent_state_check check (talent_state in ('active','showcase'));
+alter table public.students add column if not exists availability_confirmed_at date;
+-- Profiles that existed before this release count as confirmed when it was installed.
+alter table public.students add column if not exists legacy_id text;
+update public.students set availability_confirmed_at = current_date
+  where availability_confirmed_at is null and legacy_id is null;
+
+-- Stable identity for migrated records (F.06): the legacy id is stored once and
+-- never used as the public URL or changed by renames.
+create unique index if not exists students_legacy_id_idx on public.students (legacy_id) where legacy_id is not null;
+alter table public.students add column if not exists legacy_email text;          -- private, never public
+alter table public.students add column if not exists legacy_claimed boolean;     -- what the old site said
+alter table public.students add column if not exists merged_into text references public.students(id) on delete set null;
+
+alter table public.projects add column if not exists legacy_id text;
+create unique index if not exists projects_legacy_id_idx on public.projects (legacy_id) where legacy_id is not null;
+-- Demo lifecycle (F.33 - F.38): how the demo opens and whether it still works.
+alter table public.projects add column if not exists demo_type text not null default 'link';
+alter table public.projects drop constraint if exists projects_demo_type_check;
+alter table public.projects add constraint projects_demo_type_check check (demo_type in ('link','embed'));
+alter table public.projects add column if not exists demo_status text not null default 'available';
+alter table public.projects drop constraint if exists projects_demo_status_check;
+alter table public.projects add constraint projects_demo_status_check
+  check (demo_status in ('available','unavailable','archived','replaced'));
+alter table public.projects add column if not exists demo_note text not null default '';
+
+alter table public.companies add column if not exists legacy_id text;
+create unique index if not exists companies_legacy_id_idx on public.companies (legacy_id) where legacy_id is not null;
+alter table public.companies add column if not exists merged_into text references public.companies(id) on delete set null;
+alter table public.collaborations add column if not exists legacy_id text;
+create unique index if not exists collaborations_legacy_id_idx on public.collaborations (legacy_id) where legacy_id is not null;
+alter table public.collaborations alter column year_start drop not null;   -- legacy history may have no year
+
+-- Profile claims (F.08 - F.10).
+create table if not exists public.profile_claims (
+  id           uuid primary key default gen_random_uuid(),
+  student_id   text not null references public.students(id) on delete cascade,
+  user_id      uuid not null references public.app_users(user_id) on delete cascade,
+  status       text not null default 'pending' check (status in ('pending','approved','rejected')),
+  automatic    boolean not null default false,
+  message      text not null default '',
+  staff_note   text not null default '',
+  reviewed_by  uuid references public.app_users(user_id) on delete set null,
+  reviewed_at  timestamptz,
+  created_at   timestamptz not null default now()
+);
+create unique index if not exists profile_claims_one_pending
+  on public.profile_claims (student_id, user_id) where status = 'pending';
+
+-- Migration runs and their reports (F.01 - F.03).
+create table if not exists public.migration_runs (
+  id          uuid primary key default gen_random_uuid(),
+  source      text not null,
+  kind        text not null,
+  dry_run     boolean not null default false,
+  counts      jsonb not null default '{}'::jsonb,
+  report      jsonb not null default '{}'::jsonb,
+  run_by      uuid references public.app_users(user_id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+-- Non-public diagnostics (F.32). Never stores secrets, codes or tokens.
+create table if not exists public.app_events (
+  id          bigint generated always as identity primary key,
+  created_at  timestamptz not null default now(),
+  level       text not null check (level in ('info','warn','error')),
+  area        text not null,
+  message     text not null,
+  context     jsonb not null default '{}'::jsonb
+);
+create index if not exists app_events_created_idx on public.app_events (created_at desc);
+
+-- Directory paging and filters run in the database (F.28).
+create index if not exists students_directory_idx on public.students (profile_status, id);
+create index if not exists students_skills_idx on public.students using gin (skills);
+
+alter table public.profile_claims enable row level security;
+alter table public.migration_runs enable row level security;
+alter table public.app_events     enable row level security;
