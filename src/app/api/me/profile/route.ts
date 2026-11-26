@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { currentUser, type AppUser } from '@/lib/users';
-import { getOrCreateMyProfile, saveMyProfile, setPublished } from '@/lib/profile';
+import { confirmAvailability, getOrCreateMyProfile, retireProfile, saveMyProfile, setPublished } from '@/lib/profile';
 
 /**
  * The signed-in student's own profile. There is deliberately no way to
@@ -48,6 +48,9 @@ export async function PUT(request: Request) {
     if (!result.ok) return NextResponse.json({ errors: result.errors }, { status: 400 });
     return NextResponse.json({ profile: result.profile });
   }
+
+  if (body.action === 'confirm_availability') { const r = await confirmAvailability(user); return NextResponse.json(r.ok ? { profile: r.profile } : { errors: r.errors }); }
+  if (body.action === 'retire') { const r = await retireProfile(user); return NextResponse.json(r.ok ? { profile: r.profile } : { errors: r.errors }); }
 
   const result = await saveMyProfile(user, body);
   if (!result.ok) return NextResponse.json({ errors: result.errors }, { status: 400 });

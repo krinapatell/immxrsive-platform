@@ -1,5 +1,6 @@
 import 'server-only';
 import { db } from './db';
+import { staleCutoff, talentState } from './talent';
 
 export const AVAILABILITY = ['internship', 'full-time', 'contract'] as const;
 export const STATUSES = ['current', 'alumni'] as const;
@@ -18,8 +19,12 @@ export interface StudentRow {
   bio: string;
   program: string;
   status: 'current' | 'alumni';
-  profile_status: 'draft' | 'published' | 'unpublished';
+  profile_status: 'draft' | 'published' | 'unpublished' | 'retired';
   availability: string[];
+  talent_state: 'active' | 'showcase';
+  availability_confirmed_at: string | null;
+  legacy_id: string | null;
+  merged_into: string | null;
   skills: string[];
   suggested_skills: string[];
   links: { github?: string; linkedin?: string; portfolio?: string };
@@ -49,6 +54,13 @@ export interface PublicStudent {
   status: string;
   skills: string[];
   availability?: string[];
+  /**
+   * active: looking for opportunities and confirmed within a year (F.13, F.14);
+   * stale: was looking, but not confirmed for over 365 days;
+   * showcase: portfolio only, not looking; hidden: student keeps availability private.
+   */
+  talent: 'active' | 'stale' | 'showcase' | 'hidden';
+  availability_confirmed_at?: string;
   links?: { github?: string; linkedin?: string; portfolio?: string };
   location?: string;
   education?: string;
@@ -76,8 +88,15 @@ function vis(row: StudentRow): Visibility {
  * object entirely, so they never reach the browser (R2.19). The GitHub link
  * is part of the student's identity and stays public.
  */
+export { STALE_AFTER_DAYS, staleCutoff } from './talent';
+
+export function talentOf(row: Pick<StudentRow, 'talent_state' | 'availability_confirmed_at' | 'visibility' | 'availability'>): PublicStudent['talent'] {
+  return talentState(row.talent_state, row.availability_confirmed_at, vis(row as StudentRow).availability);
+}
+
 export function toPublic(row: StudentRow, projects: ProjectRef[]): PublicStudent {
   const v = vis(row);
+  const talent = talentOf(row);
   const out: PublicStudent = {
     id: row.id,
     name: row.name,
@@ -90,8 +109,11 @@ export function toPublic(row: StudentRow, projects: ProjectRef[]): PublicStudent
     section_order: row.section_order,
     avatar_url: row.avatar === 'github' ? row.avatar_url : '',
     projects,
+    talent,
   };
-  if (v.availability === 'public') out.availability = row.availability ?? [];
+  // Only current, confirmed job-seeking availability is presented as availability (F.13, F.14).
+  if (talent === 'active') out.availability = row.availability ?? [];
+  if (talent === 'active' || talent === 'stale') out.availability_confirmed_at = row.availability_confirmed_at ?? undefined;
   const github = row.links?.github ? { github: row.links.github } : {};
   out.links =
     v.links === 'public'
@@ -160,48 +182,81 @@ export function parseDirectoryQuery(params: Record<string, string | string[] | u
   };
 }
 
+export const PAGE_SIZE = 24;
+
+export interface DirectoryPage {
+  students: PublicStudent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Characters that would change the meaning of a PostgREST filter. */
+const unsafe = /[,()*%\\:."]/g;
+
 /**
- * Public directory search (R1.01 – R1.10, R2.22).
- *  - only published profiles
- *  - text search: case-insensitive substring of name, headline or a standardized skill
- *  - skills: ALL selected skills required (AND), matched exactly against structured skills
- *  - availability: ANY selected value (OR); hidden availability never matches a filter
- *  - status: ANY selected value (OR)
- *  - categories combine with AND; results are always sorted by id (deterministic)
+ * Public directory search (R1.01 - R1.10, R2.22, F.28).
+ * All filtering, sorting and paging happen in the database, so a page always
+ * returns at most PAGE_SIZE profiles however many students exist.
+ *  - only published, non-merged profiles
+ *  - text: case-insensitive substring of name, headline or a standardized skill
+ *  - skills: ALL selected (AND), exact match on structured skills
+ *  - availability: ANY selected (OR); only Active Talent whose availability is
+ *    public and confirmed in the last 365 days can match (F.13, F.14)
+ *  - status: ANY selected (OR); categories combine with AND; sorted by id
  */
-export async function searchStudents(query: DirectoryQuery): Promise<PublicStudent[]> {
-  const { data, error } = await db().from('students').select('*').eq('profile_status', 'published').order('id');
+export async function searchStudents(query: DirectoryQuery, page = 1): Promise<DirectoryPage> {
+  const standard = await listSkills();
+  const canon = new Map(standard.map((s) => [s.toLowerCase(), s]));
+  const wanted = query.skills.map((s) => canon.get(s.toLowerCase()));
+  const safePage = Math.max(1, Math.min(1000, Math.floor(page) || 1));
+  if (wanted.some((w) => !w)) return { students: [], total: 0, page: safePage, pageSize: PAGE_SIZE };
+
+  let q = db()
+    .from('students')
+    .select('*', { count: 'exact' })
+    .eq('profile_status', 'published')
+    .is('merged_into', null);
+
+  const term = query.q.replace(unsafe, ' ').trim();
+  if (term) {
+    const skillHits = standard.filter((s) => s.toLowerCase().includes(term.toLowerCase()));
+    const ors = [`name.ilike.*${term}*`, `headline.ilike.*${term}*`];
+    if (skillHits.length) ors.push(`skills.ov.{${skillHits.map((s) => `"${s}"`).join(',')}}`);
+    q = q.or(ors.join(','));
+  }
+  if (wanted.length) q = q.contains('skills', wanted as string[]);
+  if (query.availability.length) {
+    q = q
+      .overlaps('availability', query.availability)
+      .eq('talent_state', 'active')
+      .eq('visibility->>availability', 'public')
+      .gte('availability_confirmed_at', staleCutoff());
+  }
+  if (query.status.length) q = q.in('status', query.status);
+
+  const from = (safePage - 1) * PAGE_SIZE;
+  const { data, error, count } = await q.order('id').range(from, from + PAGE_SIZE - 1);
   if (error) throw error;
   const rows = (data ?? []) as StudentRow[];
-
-  const term = query.q.toLowerCase();
-  const wanted = query.skills.map((s) => s.toLowerCase());
-  const matches = rows.filter((row) => {
-    const skills = (row.skills ?? []).map((s) => s.toLowerCase());
-    if (term) {
-      const hit =
-        row.name.toLowerCase().includes(term) ||
-        row.headline.toLowerCase().includes(term) ||
-        skills.some((s) => s.includes(term));
-      if (!hit) return false;
-    }
-    if (wanted.length && !wanted.every((w) => skills.includes(w))) return false;
-    if (query.availability.length) {
-      if (vis(row).availability !== 'public') return false;
-      const avail = (row.availability ?? []).map((a) => a.toLowerCase());
-      if (!query.availability.some((a) => avail.includes(a))) return false;
-    }
-    if (query.status.length && !query.status.includes(row.status)) return false;
-    return true;
-  });
-
-  const projects = await projectsFor(matches.map((m) => m.id));
-  return matches.map((row) => toPublic(row, projects.get(row.id) ?? []));
+  const projects = await projectsFor(rows.map((r) => r.id));
+  return {
+    students: rows.map((row) => toPublic(row, projects.get(row.id) ?? [])),
+    total: count ?? rows.length,
+    page: safePage,
+    pageSize: PAGE_SIZE,
+  };
 }
 
 /** One published profile for the public page/API, or null (R1.12, R1.20, R1.21). */
 export async function getPublicStudent(id: string): Promise<PublicStudent | null> {
-  const { data, error } = await db().from('students').select('*').eq('id', id).eq('profile_status', 'published').maybeSingle();
+  const { data, error } = await db()
+    .from('students')
+    .select('*')
+    .eq('id', id)
+    .eq('profile_status', 'published')
+    .is('merged_into', null)
+    .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const projects = await projectsFor([id]);
@@ -221,6 +276,8 @@ export interface PublicContributor {
   role: string;
   statement: string;
   is_maintainer: boolean;
+  /** The contributor retired their profile: the role stays on the project, without their name (F.16). */
+  former: boolean;
 }
 
 export interface PublicProject {
@@ -236,6 +293,10 @@ export interface PublicProject {
   video_url: string;
   fallback_image_url: string;
   fallback_text: string;
+  /** How the demo opens and whether it still works (F.33 - F.38). */
+  demo_type: 'link' | 'embed';
+  demo_status: 'available' | 'unavailable' | 'archived' | 'replaced';
+  demo_note: string;
   /** Accepted contributors only. Invited, requested, declined and removed are never public (R3.09). */
   contributors: PublicContributor[];
 }
@@ -268,6 +329,7 @@ export async function getPublicProject(id: string): Promise<PublicProject | null
         role: l.role as string,
         statement: visible ? ((l.statement as string) ?? '') : '',
         is_maintainer: data.maintainer_student_id === l.student_id,
+        former: s?.profile_status === 'retired',
       };
     })
     .sort((a, b) => Number(b.is_maintainer) - Number(a.is_maintainer) || (a.student_id ?? 'ZZZ').localeCompare(b.student_id ?? 'ZZZ'));
@@ -285,6 +347,9 @@ export async function getPublicProject(id: string): Promise<PublicProject | null
     video_url: data.video_url ?? '',
     fallback_image_url: data.fallback_image_url ?? '',
     fallback_text: data.fallback_text ?? '',
+    demo_type: data.demo_type === 'embed' ? 'embed' : 'link',
+    demo_status: data.demo_status ?? 'available',
+    demo_note: data.demo_note ?? '',
     contributors,
   };
 }
