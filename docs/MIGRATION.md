@@ -68,5 +68,5 @@ Also reported: possible duplicate company **LC02 → LC01** (same domain once
 ## Scale fixture (F.27, F.28)
 
 `scale_fixture.json` was imported through the **same** page and code: 220
-students, 110 projects, 330 contributor rows, 25 companies. A second run: 0 new.
+students, 110 projects, 328 contributor rows (a person listed more than once on the same project is added once), 25 companies. A second run: 0 new.
 See `docs/SCALE-TEST.md` for the directory measurements.

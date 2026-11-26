@@ -2,7 +2,7 @@
 
 ## Setup
 
-`scale_fixture.json` (220 students, 110 projects, 25 companies) imported through
+`scale_fixture.json` (220 students, 110 projects with 328 contributor rows, 25 companies) imported through
 **Staff → Import from the old site**, the same importer used for the legacy
 export. No separate loading code.
 
