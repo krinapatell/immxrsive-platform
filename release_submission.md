@@ -34,12 +34,14 @@ Test notes: Launch notes docs/LAUNCH-NOTES.md · migration instructions and resu
   are listed under *Earlier runs*.
 - **Migration result:** 6 students, 3 projects, 3 companies, 4 collaborations;
   duplicate LS04 → LS01 (same email); missing reference LP02 → LS99;
-  unclaimed LS02, LS05, LS06; also flagged LC02 → LC01 (same domain).
+  unclaimed LS02, LS05, LS06. Companies: LC01 and LC02 flagged as the same
+  domain as North Shore Simulations (C60512B, added in Release 4). The report
+  from the deployed site is attached in Moodle.
 - **Shared legacy project:** https://immxrsive-platform.vercel.app/projects/LP01
 - **Partner history (current + past, private hidden):** https://immxrsive-platform.vercel.app/partners/LC01 and /partners/LC03
 - **Stale availability:** https://immxrsive-platform.vercel.app/students/LS02 · **Showcase Only:** /students/LS05
 - **Retired contributor kept on a project:** https://immxrsive-platform.vercel.app/projects/LP03
-- **Duplicates for Scenario D:** LS04/LS01 and LC02/LC01 are left unmerged for
+- **Duplicates for Scenario D:** LS04/LS01 and LC02/LC01/C60512B are left unmerged for
   reviewers. Staff can make more with **Create a practice duplicate pair** on
   `/staff/students` (each pair comes with a shared practice project for the
   maintainer check).

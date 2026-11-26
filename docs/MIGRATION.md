@@ -38,7 +38,7 @@ the database section "Final release" in `supabase/schema.sql`.
 
 ## Result for the supplied `legacy_export.json`
 
-First import into an empty database (same result on the deployed site):
+First import (the deployed site gave the same counts; see the note on companies below):
 
 | Records | New | Updated | Unchanged | Problems |
 |---|---|---|---|---|
@@ -62,8 +62,12 @@ Compared with `fixtures/final/legacy_expected_results.json`:
 | Shared project kept | LP01 = one project with LS01 (XR Developer) and LS02 (Interaction Developer) |
 | Private collaboration kept private | LCO3 is private; it is not on `/partners/LC03` or `/api/partners/LC03` |
 
-Also reported: possible duplicate company **LC02 → LC01** (same domain once
-`www.` is removed). The export marks it as a duplicate too.
+Also reported, companies: on an empty database, **LC02 → LC01** (same domain
+once `www.` is removed; the export marks it too). On the deployed site, **LC01
+and LC02** were both flagged as the same domain as **North Shore Simulations
+(C60512B)**, the company staff imported from its website in Release 4. All
+three are kept and shown together under *Possible duplicates* on `/staff`;
+none is merged automatically.
 
 ## Scale fixture (F.27, F.28)
 
