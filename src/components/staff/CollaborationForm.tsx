@@ -99,7 +99,7 @@ export default function CollaborationForm({
     <form onSubmit={submit} className="space-y-4">
       <Field id="col-title" label="Title" value={v.title} onChange={set('title')} error={errors.title} required hint="e.g. Industrial Safety Training Prototype" />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="col-start" label="Year it started" type="number" value={v.year_start} onChange={set('year_start')} error={errors.year_start} required />
+        <Field id="col-start" label="Year it started" type="number" value={v.year_start} onChange={set('year_start')} error={errors.year_start} hint="Leave empty only if the year was never recorded (old history)" />
         <Field id="col-end" label="Year it ended (optional)" type="number" value={v.year_end} onChange={set('year_end')} error={errors.year_end} hint="Leave empty if it's ongoing or a single year" />
       </div>
 

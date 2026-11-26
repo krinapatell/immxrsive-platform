@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { companyRedirect } from '@/lib/admin';
 import type { Metadata } from 'next';
 import { getPublicPartner, type PublicCollaboration } from '@/lib/partners';
 
@@ -13,7 +14,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: p ? `${p.name} · Industry partner · ImmXrsive` : 'Partner not found · ImmXrsive' };
 }
 
-const years = (c: PublicCollaboration) => (c.year_end && c.year_end !== c.year_start ? `${c.year_start}–${c.year_end}` : String(c.year_start));
+const years = (c: PublicCollaboration) =>
+  c.year_start == null ? 'Year not recorded' : c.year_end && c.year_end !== c.year_start ? `${c.year_start}–${c.year_end}` : String(c.year_start);
 
 function host(url: string) {
   try {
@@ -86,7 +88,11 @@ function CollaborationCard({ c }: { c: PublicCollaboration }) {
 export default async function PartnerPage({ params }: Props) {
   const { id } = await params;
   const p = await getPublicPartner(id);
-  if (!p) notFound();
+  if (!p) {
+    const moved = await companyRedirect(id); // merged duplicate: old links keep working (F.18)
+    if (moved) permanentRedirect(`/partners/${encodeURIComponent(moved)}`);
+    notFound();
+  }
   const current = p.collaborations.filter((c) => c.status === 'current');
   const past = p.collaborations.filter((c) => c.status === 'past');
 

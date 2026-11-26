@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { errorResponse, readJson } from '@/lib/api';
 import { requireStaffApi } from '@/lib/staff';
+import { mergeCompanies } from '@/lib/admin';
 import { companyAdmin, saveCollaboration, setCompanyPublished, updateCompany } from '@/lib/partners';
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -33,7 +34,7 @@ export async function PUT(request: Request, ctx: Ctx) {
   }
 }
 
-/** POST { action: publish | unpublish | add_collaboration, ... } */
+/** POST { action: publish | unpublish | add_collaboration | merge {merge_into}, ... } */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireStaffApi();
   if (auth.user === null) return auth.error;
@@ -47,6 +48,8 @@ export async function POST(request: Request, ctx: Ctx) {
         return NextResponse.json(await setCompanyPublished(auth.user, id, body.action === 'publish'));
       case 'add_collaboration':
         return NextResponse.json(await saveCollaboration(auth.user, id, body), { status: 201 });
+      case 'merge':
+        return NextResponse.json(await mergeCompanies(auth.user, id, body.merge_into));
       default:
         return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });
     }

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { staffState } from '@/lib/staff';
-import { companyAdmin, projectPicker } from '@/lib/partners';
+import { companyAdmin, listCompaniesForPicker, projectPicker } from '@/lib/partners';
+import StaffActionForm from '@/components/staff/StaffActionForm';
 import { ProjectError } from '@/lib/projects';
 import StaffGate from '@/components/staff/StaffGate';
 import StaffNav from '@/components/staff/StaffNav';
@@ -41,8 +42,11 @@ export default async function CompanyAdminPage({
     if (err instanceof ProjectError && err.status === 404) notFound();
     throw err;
   }
-  const projects = await projectPicker();
+  const [projects, allCompanies] = await Promise.all([projectPicker(), listCompaniesForPicker(false)]);
   const { company, imports, collaborations, partnerProjects } = data;
+  const mergedInto = (company as { merged_into?: string | null }).merged_into ?? null;
+  const others = allCompanies.filter((c) => c.id !== company.id);
+  const sameDomain = others.filter((c) => company.domain && c.domain === company.domain);
   const published = company.status === 'published';
   const saved = (await searchParams).saved === '1';
   const card = 'space-y-3 rounded-2xl border border-line bg-white p-5 sm:p-6';
@@ -66,6 +70,24 @@ export default async function CompanyAdminPage({
           )}
         </p>
       </div>
+      {mergedInto && (
+        <p className="rounded-lg bg-amber-50 p-3">
+          This company was merged into{' '}
+          <Link className="font-semibold underline" href={`/staff/companies/${mergedInto}`}>
+            {mergedInto}
+          </Link>
+          . Its old public link redirects there.
+        </p>
+      )}
+      {!mergedInto && sameDomain.length > 0 && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm">
+          <strong>Possible duplicate:</strong> {sameDomain.map((c) => `${c.name} (${c.id})`).join(', ')} has the same website. If it is the same company,{' '}
+          <a href="#merge" className="underline">
+            merge them
+          </a>
+          .
+        </p>
+      )}
       {saved && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium">Saved as a draft. Check the details, then publish when ready.</p>}
 
       <section className={card} aria-labelledby="pub-h">
@@ -156,7 +178,7 @@ export default async function CompanyAdminPage({
               <span className="min-w-0">
                 <span className="block break-words font-semibold">{c.title}</span>
                 <span className="block text-sm text-muted">
-                  {c.year_end && c.year_end !== c.year_start ? `${c.year_start}–${c.year_end}` : c.year_start} · {c.status === 'current' ? 'Current' : 'Past'} ·{' '}
+                  {c.year_start == null ? 'Year not recorded' : c.year_end && c.year_end !== c.year_start ? `${c.year_start}–${c.year_end}` : c.year_start} · {c.status === 'current' ? 'Current' : 'Past'} ·{' '}
                   {VIS_LABEL[c.visibility]}
                 </span>
                 {c.projects.length > 0 && <span className="block text-sm">Projects: {c.projects.map((p) => p.title).join(', ')}</span>}
@@ -199,6 +221,31 @@ export default async function CompanyAdminPage({
           </ul>
         )}
       </section>
+      {!mergedInto && others.length > 0 && (
+        <section className={card} aria-labelledby="merge-h" id="merge">
+          <h2 id="merge-h" className="text-lg font-bold">
+            Merge a duplicate
+          </h2>
+          <p className="text-sm text-muted">
+            If this is the same company as another one, merge it into the one you keep. Its collaborations and project relationships move there, and this
+            company&apos;s public link redirects there.
+          </p>
+          <div className="max-w-md">
+            <StaffActionForm
+              url={`/api/staff/companies/${company.id}`}
+              action="merge"
+              name="merge_into"
+              label="Company to keep"
+              initial={sameDomain[0]?.id ?? others[0].id}
+              options={others.map((c) => ({ value: c.id, label: `${c.name} (${c.id})${c.status === 'draft' ? ' – draft' : ''}` }))}
+              submitLabel="Merge into that company"
+              confirm="Merge this company into the one you chose? This company will be hidden."
+              redirectField="merged_into"
+                redirectBase="/staff/companies/"
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
