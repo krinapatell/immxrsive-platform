@@ -157,3 +157,16 @@ nothing, Limited returns only year, status and `public_summary`.
 `npm test` runs `tests/resume-and-email.test.mts` `tests/repo.test.mts` and `tests/company-import.test.mts`: the four resume fixtures
 (including "no invented facts" and the untrusted-text fixture) and the email
 domain rule.
+
+## Final release
+
+| What | Where | How |
+|---|---|---|
+| Legacy import (F.01–F.06, F.27) | `src/lib/migration.ts`, `src/lib/migration-parse.ts`, `/staff/migrate`, `POST /api/staff/migrate` | Reads both export shapes, matches every record by `legacy_id`, reports new/updated/unchanged/problems, duplicates and missing references, and stores each run in `migration_runs`. Dry run first. Never overwrites records changed on the new site. |
+| Claims (F.07–F.10) | `src/lib/admin.ts` (`submitClaim`, `decideClaim`), `src/components/ClaimBox.tsx`, `/staff/claims/{id}` | Auto-approve only when the verified Algoma email equals `legacy_email`; otherwise staff review. On approval, the claimant's own earlier profile is merged in. |
+| Lifecycle (F.11–F.16) | `staffUpdateStudent()` in `src/lib/admin.ts`, `/staff/students/{id}`; students use the profile editor | Status (current/alumni), talent state, publish/unpublish/retire/restore, owner. Retiring hides the profile only; project rows stay and show "a former contributor". |
+| Stale availability (F.14) | `src/lib/talent.ts`, `TalentStatus.tsx` | 365-day rule; stale availability is not shown as current and is skipped by availability filters. |
+| Merge + redirect (F.17, F.18) | `mergeStudents()`, `mergeCompanies()`, `studentRedirect()`, `companyRedirect()` | Moves relationships, sets `merged_into`, hides the old record; the old URL returns a permanent redirect. |
+| Maintainer recovery (F.19) | `setMaintainer()`, `/staff/projects/{id}` | Only an accepted contributor can become maintainer. |
+| Demos (F.33–F.38) | `src/components/DemoLauncher.tsx`, project fields `demo_type`, `demo_status`, `demo_note` | Play first; sandboxed frame (`allow-scripts allow-pointer-lock`, empty `allow`) or new tab; close returns focus; unavailable/archived hides Play and shows the note and preview. |
+| Diagnostics (F.30–F.32) | `src/lib/events.ts`, `/staff/diagnostics` | `logEvent()` writes to `app_events` and the server log, dropping secret-looking keys. |

@@ -36,6 +36,14 @@ Never put any of these values in GitHub, Moodle, issues or chat.
    - **Project URL** → `SUPABASE_URL`
    - **service_role** key (click "Reveal") → `SUPABASE_SERVICE_ROLE_KEY`
 
+### Final release database step
+
+Run the section headed **Final release** at the end of `supabase/schema.sql`,
+then `supabase/final-demo-examples.sql` (demo examples on fixture projects P01,
+P06, P07), then `notify pgrst, 'reload schema';`. `/api/health` should show
+`final_release_ready: true`. Then import the legacy data at `/staff/migrate`
+(see `docs/MIGRATION.md`).
+
 ## 2. GitHub sign-in
 
 1. Go to https://github.com/settings/developers → **OAuth Apps → New OAuth App**.
