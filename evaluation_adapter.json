@@ -8,7 +8,7 @@
       "method_or_action": "Choose legacy_export.json, press 'Check file (no changes)', then 'Import'; import the same file again; 'Download report'",
       "role": "Staff: a verified student account with staff tools turned on (sign in at /student, verify @algomau.ca, open /staff, enter the staff access code given in Moodle 'Reviewer test access')",
       "setup": "legacy_export.json from Final Release Fixtures (also in the repository at fixtures/final/). The team already imported it once; earlier runs are listed on the page",
-      "expected_behavior": "Report with new/updated/unchanged/problems per record type; duplicate LS04 -> LS01 (same email) and LC02 -> LC01 (same domain); missing reference LP02 -> LS99; unclaimed LS02, LS05, LS06. A re-run creates 0 new records"
+      "expected_behavior": "Report with new/updated/unchanged/problems per record type; duplicate LS04 -> LS01 (same email); LC01 and LC02 flagged as the same domain as North Shore Simulations (C60512B, from Release 4); missing reference LP02 -> LS99; unclaimed LS02, LS05, LS06. A re-run creates 0 new records"
     },
     {
       "requirement_or_scenario": "F.04, F.06, Scenario C.2",
@@ -20,11 +20,11 @@
     },
     {
       "requirement_or_scenario": "F.05, Scenario J",
-      "entry_point": "/partners/LC01, /partners/LC03 (API: GET /api/partners/{id})",
+      "entry_point": "/partners/LC01, /partners/LC02, /partners/LC03 (API: GET /api/partners/{id})",
       "method_or_action": "Open the migrated partners",
       "role": "Public",
       "setup": "Legacy export imported",
-      "expected_behavior": "LC01 shows current (XR Maintenance Study) and past (Industrial Safety Training, Legacy Brand Event) collaborations, year shown as 'Year not recorded'; LCO3 (private) is absent from LC03's page and API"
+      "expected_behavior": "LC01 shows current (XR Maintenance Study) and past (Industrial Safety Training) collaborations with 'Year not recorded'; LC02 shows its past Legacy Brand Event (it moves to the kept company if merged); LCO3 (private) is absent from LC03's page and API"
     },
     {
       "requirement_or_scenario": "F.07, F.08, F.09, Scenario C.3-C.5",
@@ -79,7 +79,7 @@
       "entry_point": "/staff/students/{id} 'Merge a duplicate'; /staff/companies/{id} 'Merge a duplicate' (API: action 'merge' {merge_into}); 'Create a practice duplicate pair' on /staff/students",
       "method_or_action": "Merge LS04 into LS01 (or a QA practice pair: merge QA....B into QA....A); merge LC02 into LC01; then open the old URLs",
       "role": "Staff: a verified student account with staff tools turned on (sign in at /student, verify @algomau.ca, open /staff, enter the staff access code given in Moodle 'Reviewer test access')",
-      "setup": "LS04/LS01 and LC02/LC01 from the legacy export (the team may already have merged one; use 'Create a practice duplicate pair' for a fresh pair with a shared project)",
+      "setup": "LS04/LS01 and LC02/LC01/C60512B from the legacy export and Release 4 (left unmerged by the team; use 'Create a practice duplicate pair' if someone already merged them)",
       "expected_behavior": "Projects/collaborations move to the kept record; /students/{old} and /partners/{old} permanently redirect (308) to the kept record; GET /api/students/{old} returns 301 with moved_to"
     },
     {
